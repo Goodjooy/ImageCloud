@@ -1,7 +1,6 @@
 package com.jacky.imagecloud.models.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.jacky.imagecloud.models.items.Item;
 
 import javax.persistence.*;
 
@@ -14,10 +13,15 @@ public class FileStorage {
 
     @JsonIgnore
     @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "item_id",referencedColumnName = "id")
+    @JoinColumn(name = "item_id", referencedColumnName = "id")
     public Item item;
 
-    @Column(name = "path",nullable = false)
+    @JsonIgnore
+    @Column(name = "path", nullable = false)
     public String filePath;
+
+    public String getFileURL() {
+        return String.format("/storage/%s", filePath);
+    }
 
 }

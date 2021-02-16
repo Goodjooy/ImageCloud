@@ -1,5 +1,7 @@
 package com.jacky.imagecloud.data;
 
+import com.zaxxer.hikari.util.SuspendResumeLock;
+
 public class Result<DATA> {
     public final DATA data;
     public final boolean err;
@@ -17,4 +19,5 @@ public class Result<DATA> {
     public Result(String message){
         this(null,true,message);
     }
+
 }

@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import javax.naming.AuthenticationNotSupportedException;
+
 
 public class MySQLUserDetailsService implements UserDetailsService {
     UserRepository userRepository;
@@ -39,7 +41,8 @@ public class MySQLUserDetailsService implements UserDetailsService {
             var u = result.get(0);
             builder.password(u.getPasswordHash());
             builder.roles("USER");
+            return builder.build();
         }
-        return builder.build();
+        throw new UsernameNotFoundException(emailAddress);
     }
 }

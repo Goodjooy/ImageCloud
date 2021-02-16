@@ -1,20 +1,27 @@
 package com.jacky.imagecloud.models.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.jacky.imagecloud.err.RootPathNotExistException;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
 
 import javax.persistence.*;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
+import java.util.LinkedList;
 import java.util.Set;
 
+@Entity
+@Table(name = "items")
 public class Item {
 
     @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
+
+    @JsonIgnore
+    public Boolean isRemoved=false;
 
     @Column(name = "item_name", nullable = false, length = 128)
     private String ItemName;
@@ -40,25 +47,63 @@ public class Item {
 
     public Item() {
     }
+
     @JsonIgnore
-    public Item GetTargetItem(@NotNull String path) throws FileNotFoundException {
+    public LinkedList<Item>getAllSubItem(){
+        var items=new LinkedList<Item>();
+        for (Item item :
+                SubItems) {
+            switch (item.itemType){
+                case DIR:
+                {
+                    items.addAll(item.getAllSubItem());
+                    break;
+                }
+                case FILE:
+                {
+                    items.add(item);
+                }
+            }
+        }
+        return items;
+    }
 
-        var pathGroup=path.split("/");
+    @JsonIgnore
+    public Item GetTargetItem(@NotNull String path) throws FileNotFoundException, RootPathNotExistException {
 
-        Item temp=this;
+        var pathGroup = splitPath(path);
+
+        Item temp = this;
         for (String p :
                 pathGroup) {
-            if(temp==null)
-                throw new FileNotFoundException(String.format("path: `%s` not exist",path));
-            temp=findTargetItem(temp,p);
+            temp = findTargetItem(temp, p);
+            if (temp == null) {
+                throw new FileNotFoundException(String.format("path: `%s` not exist", path));
+            }
         }
         return temp;
     }
+
     @JsonIgnore
-    private Item findTargetItem(Item item, String path){
+    public String[]splitPath(String path) throws RootPathNotExistException {
+        if (path.startsWith("/"))
+            path=path.substring(1);
+        if(path.endsWith("/"))
+            path=path.substring(0,path.length()-1);
+
+        var groups = path.split("/");
+
+        if (!groups[0].equals("root")) throw new RootPathNotExistException();
+        return groups;
+    }
+
+    @JsonIgnore
+    public Item findTargetItem(Item item, String path) {
+        if(item.ItemName.equals(path))
+            return item;
         for (Item subItem :
                 item.SubItems) {
-            if (subItem.ItemName.equals(path)){
+            if (subItem.ItemName.equals(path)) {
                 return subItem;
             }
         }

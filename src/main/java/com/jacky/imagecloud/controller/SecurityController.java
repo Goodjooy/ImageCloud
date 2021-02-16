@@ -1,10 +1,10 @@
 package com.jacky.imagecloud.controller;
 
 import com.jacky.imagecloud.data.Result;
-import com.jacky.imagecloud.models.items.Item;
-import com.jacky.imagecloud.models.items.ItemRepository;
-import com.jacky.imagecloud.models.items.ItemType;
+import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
+import com.jacky.imagecloud.models.users.UserInformation;
+import com.jacky.imagecloud.models.users.UserInformationRepository;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -30,10 +31,12 @@ public class SecurityController {
     UserRepository userRepository;
     @Autowired
     ItemRepository itemRepository;
+    @Autowired
+    UserInformationRepository informationRepository;
 
     @GetMapping("/sign-in")
     public String getSignInPage() {
-        return "sign-in";
+        return "sign_in";
     }
 
     @GetMapping("/sign-up")
@@ -46,7 +49,8 @@ public class SecurityController {
     public Result<Boolean> CheckEmailExist(
             @RequestParam(name = "email") String emailAddress
     ) {
-        if (!emailPattern.matcher(emailAddress).matches()) {
+        var matcher=emailAddress.matches(emailAddress);
+        if (!matcher) {
             return new Result<>("bad email address");
         }
         User user = new User();
@@ -76,6 +80,7 @@ public class SecurityController {
         try {
             Item rootItem = new Item();
             User user = new User();
+            UserInformation information=new UserInformation();
 
             user.setEmailAddress(emailAddress);
             user.setName(name);
@@ -87,8 +92,11 @@ public class SecurityController {
             rootItem.setParentID(-1);
             rootItem.setUser(user);
 
+            information.user=user;
+
             userRepository.save(user);
             itemRepository.save(rootItem);
+            informationRepository.save(information);
 
             return new Result<>(true);
 

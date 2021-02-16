@@ -10,6 +10,7 @@ import java.util.Set;
 @Entity
 @Table(name = "users")
 public class User {
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
@@ -24,10 +25,10 @@ public class User {
     private String passWdHash;
 
     @JsonIgnore
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user")
+    @OneToMany(cascade = CascadeType.ALL)
     private Set<Item> masterFiles;
 
-    @JsonIgnore
+    //@JsonIgnore
     @OneToOne(mappedBy = "user")
     public UserInformation information;
 
@@ -80,6 +81,7 @@ public class User {
 
     public void addItems(Iterable<Item> items) {
         for (Item item : items) {
+            if (!item.isRemoved)
             masterFiles.add(item);
         }
     }
@@ -94,7 +96,7 @@ public class User {
 
     private Item generateItemStruct(Set<Item> items) {
         Item root;
-        var rootItems = findAllSUbItem(items, 0);
+        var rootItems = findAllSUbItem(items, -1);
         if (!rootItems.isEmpty()) {
             root = (Item) rootItems.toArray()[0];
 
@@ -117,7 +119,7 @@ public class User {
     private Set<Item> findAllSUbItem(Set<Item> items, int parent) {
         Set<Item> target = new HashSet<>();
         for (Item item : items) {
-            if (item.getParentID() == parent) {
+            if (item.getParentID() == parent &&!item.isRemoved) {
                 target.add(item);
             }
         }
