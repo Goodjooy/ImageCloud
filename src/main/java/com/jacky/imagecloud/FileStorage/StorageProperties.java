@@ -1,13 +1,12 @@
 package com.jacky.imagecloud.FileStorage;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Bean;
 
 
 @ConfigurationProperties("fileuploader")
 public class StorageProperties {
 
-    private String SavePath="E:\\test-upload\\";
+    private String SavePath="/root/storage_data";
 
     public String getSavePath() {
         return SavePath;

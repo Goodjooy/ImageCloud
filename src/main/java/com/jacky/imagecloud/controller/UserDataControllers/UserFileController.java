@@ -1,19 +1,20 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
-import ch.qos.logback.core.joran.action.NewRuleAction;
 import com.jacky.imagecloud.FileStorage.FileUploader;
-import com.jacky.imagecloud.FileStorage.StorageProperties;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
+import com.jacky.imagecloud.err.UnknownItemTypeException;
 import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
-import com.jacky.imagecloud.models.users.UserInformationRepository;
 import com.jacky.imagecloud.models.users.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,8 +37,9 @@ import java.util.LinkedList;
  * /file?path=<path:string> DELETE 删除文件/文件夹
  */
 @RestController
-//@Controller
 public class UserFileController {
+    Logger logger = LoggerFactory.getLogger(UserFileController.class);
+
     @Autowired
     UserRepository userRepository;
     @Autowired
@@ -46,15 +48,17 @@ public class UserFileController {
     FileStorageRepository fileStorageRepository;
     @Autowired
     FileUploader<FileStorage> fileUploader;
+    PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @GetMapping(path = "/walk")
     public Result<User> getUserInfo(Authentication authentication) {
         try {
             User user = getAndInitUser(authentication);
 
+            logger.info(String.format("load full User Info<%s|%s> success", user.getEmailAddress(), user.getName()));
             return new Result<>(user);
-
         } catch (Exception e) {
+            logger.error(String.format("load User<%s> failure", authentication.getName()), e);
             return new Result<>(e.getMessage());
         }
     }
@@ -66,8 +70,11 @@ public class UserFileController {
             var user = getAndInitUser(authentication);
 
             var item = user.getRootItem().GetTargetItem(path);
+
+            logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.getEmailAddress(), user.getName(), path));
             return new Result<>(item);
         } catch (Exception e) {
+            logger.error(String.format("load item of User<%s> in path<%s> failure", authentication.getName(), path), e);
             return new Result<>(e.getMessage());
         }
     }
@@ -109,9 +116,12 @@ public class UserFileController {
             fileStorageRepository.save(fileStorage);
             itemRepository.save(lastItem);
 
-
+            logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> success",
+                    user.getEmailAddress(), user.getName(), path, file.getName()));
             return new Result<>(true);
         } catch (Exception e) {
+            logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure",
+                    authentication.getName(), path, file.isEmpty() ? "unknown" : file.getName()), e);
             return new Result<>(e.getMessage());
         }
     }
@@ -119,11 +129,15 @@ public class UserFileController {
 
     @DeleteMapping(path = "/file")
     public Result<Boolean> deleteFile(Authentication authentication,
-                                      @RequestParam(name = "path", defaultValue = "/root") String path
+                                      @RequestParam(name = "path", defaultValue = "/root") String path,
+                                      @RequestParam(name = "paswd", defaultValue = "") String password
     ) {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
             User user = getAndInitUser(authentication);
+            //var encodedPassword=encoder.encode(password);
+            //if (!user.getPasswordHash().equals(encodedPassword)) return new Result<>("wrong password!");
+            if (path.equals("/root")) return new Result<>("can not remove /root dir");
             var rootItem = user.getRootItem();
 
             var target = rootItem.GetTargetItem(path);
@@ -160,16 +174,21 @@ public class UserFileController {
                             }
                         }
                     }
-                    deleteItem(target);
+                    if (!path.endsWith("/"))
+                        deleteItem(target);
                     userRepository.save(user);
                     break;
                 }
                 default:
-                    return new Result<>("unknown item type");
+                    throw new UnknownItemTypeException("unknown item type");
             }
+            logger.info(String.format("remove item of User<%s|%s> under path<%s> success",
+                    user.getEmailAddress(), user.getName(), path));
             return new Result<>(true);
 
-        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
+        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | UnknownItemTypeException e) {
+            logger.error(String.format("remove item of User<%s|> under path<%s> failure",
+                    authentication.getName(), path), e);
             return new Result<>(e.getMessage());
         }
 
@@ -189,7 +208,7 @@ public class UserFileController {
             var info = user.information;
 
             itemResult.setUser(user);
-            itemResult.isRemoved=false;
+            itemResult.isRemoved = false;
             itemResult.getUser().information = null;
 
             var items = itemRepository.findAll(Example.of(itemResult));
@@ -197,6 +216,7 @@ public class UserFileController {
 
             user.constructItem();
             user.information = info;
+            logger.info(String.format("organization User<%s|%s> data struct success!", user.getEmailAddress(), user.getName()));
             return user;
         }
         throw new UserNotFoundException(String.format("User<%s> not found", authentication.getName()));
@@ -233,8 +253,13 @@ public class UserFileController {
         if (item.getItemType() == ItemType.FILE && item.file != null) {
             fileStorageRepository.deleteById(item.file.id);
         }
-        item.isRemoved=true;
+        var user = item.getUser();
+        user.getAllItems().remove(item);
+
+        item.isRemoved = true;
         itemRepository.save(item);
+
+        logger.info(String.format("Remove file success<%s>", item.getItemName()));
     }
 
 }

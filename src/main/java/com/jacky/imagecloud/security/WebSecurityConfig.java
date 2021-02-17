@@ -1,6 +1,8 @@
 package com.jacky.imagecloud.security;
 
 import com.jacky.imagecloud.models.users.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -14,13 +16,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     UserRepository userRepository;
     PasswordEncoder encoder = new BCryptPasswordEncoder();
+    Logger logger= LoggerFactory.getLogger(WebSecurityConfig.class);
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         //身份验证
         auth
                 //数据库身份验证
-                .userDetailsService(new MySQLUserDetailsService(userRepository)).passwordEncoder(encoder)
+                .userDetailsService(new MySQLUserDetailsService(userRepository,logger)).passwordEncoder(encoder)
 
                 .and()
 
@@ -58,8 +61,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .usernameParameter("uid")
                 .passwordParameter("paswd")
 
-                .successHandler(new LoginSuccessHandle())
-                .failureHandler(new LoginFailureHandle())
+                .successHandler(new LoginSuccessHandle(logger))
+                .failureHandler(new LoginFailureHandle(logger))
                 .permitAll()
                 .and()
 
@@ -67,7 +70,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .logoutUrl("/sign-out")
                 .clearAuthentication(true)
                 .invalidateHttpSession(true)
-                .logoutSuccessHandler(new LogOutSuccessHandle())
+                .logoutSuccessHandler(new LogOutSuccessHandle(logger))
 
                 .and() //;
                 .csrf().disable();

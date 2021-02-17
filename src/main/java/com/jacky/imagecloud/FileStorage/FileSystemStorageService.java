@@ -112,7 +112,10 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
 	@Override
 	public long delete(String fileName) {
 		File targetFile=rootLocation.resolve(fileName).toFile();
-		long size=targetFile.getTotalSpace();
+		long size=0;
+		if (!targetFile.exists() && !targetFile.isFile()) {
+			size=targetFile.length();
+		}
 		FileSystemUtils.deleteRecursively(targetFile);
 		return size;
 	}
