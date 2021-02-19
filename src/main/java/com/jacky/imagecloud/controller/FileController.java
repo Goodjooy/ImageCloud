@@ -24,6 +24,8 @@ public class FileController {
 
     @GetMapping(path = "/upload")
     public String uploadFile() {
+        logger.debug("upload file page");
+
         return "file-upload";
     }
 
@@ -32,6 +34,7 @@ public class FileController {
         //storage,thumbnail
         model.addAttribute("fileS", "/storage/"+filename)
         .addAttribute("fileT","/thumbnail/"+filename);
+        logger.debug("preview file page filename:"+filename);
         return "file-preview";
     }
 

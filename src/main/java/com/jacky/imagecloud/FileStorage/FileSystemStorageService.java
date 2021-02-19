@@ -32,6 +32,7 @@ import javax.imageio.ImageIO;
 @Service
 public class FileSystemStorageService implements FileUploader<FileStorage> {
 
+
     private final Path rootRawLocation;
     private final Path rootThumbnailLocation;
 

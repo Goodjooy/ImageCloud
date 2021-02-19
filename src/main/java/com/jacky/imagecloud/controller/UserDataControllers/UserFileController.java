@@ -124,7 +124,7 @@ public class UserFileController {
             return new Result<>(true);
         } catch (Exception e) {
             logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure",
-                    authentication.getName(), path, file.isEmpty() ? "unknown" : file.getName()), e);
+                    authentication.getName(), path, file.isEmpty() ? "unknown" : file.getOriginalFilename()), e);
             return new Result<>(e.getMessage());
         }
     }
@@ -222,21 +222,21 @@ public class UserFileController {
         }
     }
 
-    @PostMapping(path = "/file-rename")
+    @PostMapping(path = "/rename")
     public Result<String> fileRename(Authentication authentication,
                                      @RequestParam(name = "oldPath", defaultValue = "/root") String oldFilePath,
-                                     @RequestParam(name = "newName", defaultValue = "") String newFileName) {
+                                     @RequestParam(name = "newName", defaultValue = "") String newName) {
         var temp = getFile(authentication, oldFilePath);
-        if (!temp.err && temp.data.getItemType() == ItemType.FILE) {
-            temp.data.setItemName(newFileName);
+        if (!temp.err ) {
+            temp.data.setItemName(newName);
             itemRepository.save(temp.data);
 
             logger.info(String.format("user<%s> change file<%s> name to <%s>", authentication.getName()
-                    , oldFilePath, newFileName));
-            return new Result<>(newFileName, false, "");
+                    , oldFilePath, newName));
+            return new Result<>(newName, false, "");
         }
         logger.error(String.format("User<%s> change filename<%s> failure", authentication.getName(), oldFilePath));
-        return new Result<>(null, true, temp.message + "or target path is not a file");
+        return new Result<>(null, true, temp.message);
     }
 
     private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
