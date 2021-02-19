@@ -95,6 +95,7 @@ public class UserFileController {
                     items) {
                 if (!user.getAllItems().contains(item)) {
                     item.setParentID(lastID);
+                    user.addItem(item);
                     itemRepository.save(item);
                 }
                 lastID = item.getId();
@@ -110,14 +111,16 @@ public class UserFileController {
             fileStorage.item = lastItem;
             lastItem.file = fileStorage;
 
+            user.addItem(lastItem);
+
             user.information.usedSize += file.getSize();
 
-            userRepository.save(user);
             fileStorageRepository.save(fileStorage);
             itemRepository.save(lastItem);
+            userRepository.save(user);
 
             logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> success",
-                    user.getEmailAddress(), user.getName(), path, file.getName()));
+                    user.getEmailAddress(), user.getName(), path, file.getOriginalFilename()));
             return new Result<>(true);
         } catch (Exception e) {
             logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure",
@@ -135,9 +138,10 @@ public class UserFileController {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
             User user = getAndInitUser(authentication);
-            //var encodedPassword=encoder.encode(password);
-            //if (!user.getPasswordHash().equals(encodedPassword)) return new Result<>("wrong password!");
+
+            if (!encoder.matches(password, user.getPasswordHash())) return new Result<>("wrong password!");
             if (path.equals("/root")) return new Result<>("can not remove /root dir");
+
             var rootItem = user.getRootItem();
 
             var target = rootItem.GetTargetItem(path);
@@ -194,28 +198,60 @@ public class UserFileController {
 
     }
 
+    @PostMapping(path = "/dir")
+    public Result<Boolean> createDir(Authentication authentication,
+                                     @RequestParam(name = "path", defaultValue = "/root") String path) {
+        try {
+            var user = getAndInitUser(authentication);
+            var items = GetItemString(path, user.getRootItem());
+
+            Integer lastID = -1;
+            for (Item item :
+                    items) {
+                if (!user.getAllItems().contains(item)) {
+                    item.setParentID(lastID);
+                    itemRepository.save(item);
+                }
+                lastID = item.getId();
+            }
+            logger.info(String.format("User<%s|%s> Create path %s Success!", user.getName(), user.getEmailAddress(), path));
+            return new Result<>(true);
+        } catch (UserNotFoundException | RootPathNotExistException e) {
+            logger.error(String.format("User<%s> create dir %s failure", authentication.getName(), path), e);
+            return new Result<>(false);
+        }
+    }
+
+    @PostMapping(path = "/file-rename")
+    public Result<String> fileRename(Authentication authentication,
+                                     @RequestParam(name = "oldPath", defaultValue = "/root") String oldFilePath,
+                                     @RequestParam(name = "newName", defaultValue = "") String newFileName) {
+        var temp = getFile(authentication, oldFilePath);
+        if (!temp.err && temp.data.getItemType() == ItemType.FILE) {
+            temp.data.setItemName(newFileName);
+            itemRepository.save(temp.data);
+
+            logger.info(String.format("user<%s> change file<%s> name to <%s>", authentication.getName()
+                    , oldFilePath, newFileName));
+            return new Result<>(newFileName, false, "");
+        }
+        logger.error(String.format("User<%s> change filename<%s> failure", authentication.getName(), oldFilePath));
+        return new Result<>(null, true, temp.message + "or target path is not a file");
+    }
+
     private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
         String emailAddress = authentication.getName();
         User user = new User();
         user.setEmailAddress(emailAddress);
 
-        var itemResult = new Item();
+        //var itemResult = new Item();
 
         var result = userRepository.findOne(Example.of(user));
 
         if (result.isPresent()) {
             user = result.get();
-            var info = user.information;
-
-            itemResult.setUser(user);
-            itemResult.isRemoved = false;
-            itemResult.getUser().information = null;
-
-            var items = itemRepository.findAll(Example.of(itemResult));
-            user.addItems(items);
-
             user.constructItem();
-            user.information = info;
+
             logger.info(String.format("organization User<%s|%s> data struct success!", user.getEmailAddress(), user.getName()));
             return user;
         }

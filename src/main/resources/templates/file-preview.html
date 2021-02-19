@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>图片预览</title>
+</head>
+<body>
+<div>
+    <ul>
+        <li>
+            原图
+            <img th:src="${fileS}"/>
+        </li>
+        <li>
+            缩略图
+            <img th:src="${fileT}">
+        </li>
+    </ul>
+</div>
+</body>
+</html>

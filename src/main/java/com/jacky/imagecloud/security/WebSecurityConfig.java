@@ -73,7 +73,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .logoutSuccessHandler(new LogOutSuccessHandle(logger))
 
                 .and() //;
-                .csrf().disable();
+                .csrf().disable()
+
+        ;
 
     }
 }

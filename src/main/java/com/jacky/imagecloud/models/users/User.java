@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jacky.imagecloud.models.items.Item;
 
 import javax.persistence.*;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -32,12 +33,16 @@ public class User {
     @OneToOne(mappedBy = "user")
     public UserInformation information;
 
+    @OneToOne(mappedBy = "user")
+    public UserImage image;
+
     @Transient
     private Item rootItem;
 
-    public void constructItem(){
+    public void constructItem() {
         setRootItem(generateItemStruct(getAllItems()));
     }
+
     public Integer getID() {
         return id;
     }
@@ -54,6 +59,7 @@ public class User {
         return name;
     }
 
+    @JsonIgnore
     public String getPasswordHash() {
         return passWdHash;
     }
@@ -73,6 +79,9 @@ public class User {
     public void setPassword(String password) {
         this.passWdHash = password;
     }
+    public void addItem(Item ...items){
+        addItems(Arrays.asList(items));
+    }
 
     @JsonIgnore
     public Set<Item> getAllItems() {
@@ -82,7 +91,7 @@ public class User {
     public void addItems(Iterable<Item> items) {
         for (Item item : items) {
             if (!item.isRemoved)
-            masterFiles.add(item);
+                masterFiles.add(item);
         }
     }
 
@@ -119,7 +128,7 @@ public class User {
     private Set<Item> findAllSUbItem(Set<Item> items, int parent) {
         Set<Item> target = new HashSet<>();
         for (Item item : items) {
-            if (item.getParentID() == parent &&!item.isRemoved) {
+            if (item.getParentID() == parent && !item.isRemoved) {
                 target.add(item);
             }
         }

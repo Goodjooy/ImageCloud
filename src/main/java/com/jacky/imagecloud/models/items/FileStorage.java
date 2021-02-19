@@ -23,5 +23,8 @@ public class FileStorage {
     public String getFileURL() {
         return String.format("/storage/%s", filePath);
     }
+    public String getThumbnailURL(){
+        return String.format("/thumbnail/%s",filePath);
+    }
 
 }
