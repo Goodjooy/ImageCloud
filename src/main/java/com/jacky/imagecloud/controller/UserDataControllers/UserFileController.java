@@ -1,5 +1,6 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
+import com.jacky.imagecloud.FileStorage.FileSystemStorageService;
 import com.jacky.imagecloud.FileStorage.FileUploader;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
@@ -8,6 +9,7 @@ import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
+import org.apache.catalina.LifecycleState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileNotFoundException;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * 用户信息控制器
@@ -47,7 +50,7 @@ public class UserFileController {
     @Autowired
     FileStorageRepository fileStorageRepository;
     @Autowired
-    FileUploader<FileStorage> fileUploader;
+    FileSystemStorageService fileUploader;
     PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @GetMapping(path = "/walk")
@@ -70,6 +73,8 @@ public class UserFileController {
             var user = getAndInitUser(authentication);
 
             var item = user.getRootItem().GetTargetItem(path);
+
+            fileOperateCheck();
 
             logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.getEmailAddress(), user.getName(), path));
             return new Result<>(item);
@@ -125,6 +130,7 @@ public class UserFileController {
         } catch (Exception e) {
             logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure",
                     authentication.getName(), path, file.isEmpty() ? "unknown" : file.getOriginalFilename()), e);
+            fileOperateCheck();
             return new Result<>(e.getMessage());
         }
     }
@@ -193,6 +199,7 @@ public class UserFileController {
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | UnknownItemTypeException e) {
             logger.error(String.format("remove item of User<%s|> under path<%s> failure",
                     authentication.getName(), path), e);
+
             return new Result<>(e.getMessage());
         }
 
@@ -238,6 +245,24 @@ public class UserFileController {
         logger.error(String.format("User<%s> change filename<%s> failure", authentication.getName(), oldFilePath));
         return new Result<>(null, true, temp.message);
     }
+
+    /**
+     * 检查文件操作异常状态
+     */
+    private void fileOperateCheck(){
+        var RawFiles=fileUploader.loadAll();
+
+        var allFiles=fileStorageRepository.findAll();
+        var allFilesName=List.of(allFiles.stream().map(fileStorage -> fileStorage.filePath).toArray());
+
+        var RawRemove=RawFiles.filter(path -> !allFilesName.contains(path.getFileName().toString()));
+
+        //remove
+        var fileSizes=RawRemove.map(path -> fileUploader.delete(path.getFileName().toString()));
+        var sum=fileSizes.reduce(0L, Long::sum);
+        logger.info(String.format("Exception remove file %d",sum));
+    }
+
 
     private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
         String emailAddress = authentication.getName();

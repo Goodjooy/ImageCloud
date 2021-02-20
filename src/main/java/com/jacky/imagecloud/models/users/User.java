@@ -89,6 +89,9 @@ public class User {
     }
 
     public void addItems(Iterable<Item> items) {
+        if (masterFiles==null){
+            masterFiles=new HashSet<>();
+        }
         for (Item item : items) {
             if (!item.isRemoved)
                 masterFiles.add(item);

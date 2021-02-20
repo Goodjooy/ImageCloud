@@ -122,6 +122,15 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         }
 
     }
+    public Stream<Path>loadAllInThumbnail(){
+        try {
+            return Files.walk(this.rootThumbnailLocation,1)
+                    .filter(path -> !path.equals(this.rootThumbnailLocation))
+                    .map(this.rootThumbnailLocation::relativize);
+        } catch (IOException e) {
+            throw new StorageException("Failed to read stored files", e);
+        }
+    }
 
     @Override
     public Path load(String filename) {

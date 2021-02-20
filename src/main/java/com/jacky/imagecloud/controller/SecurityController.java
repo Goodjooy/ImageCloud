@@ -107,6 +107,8 @@ public class SecurityController {
             rootItem.setParentID(-1);
             rootItem.setUser(user);
 
+            user.addItem(rootItem);
+
             information.user = user;
 
             userRepository.save(user);
