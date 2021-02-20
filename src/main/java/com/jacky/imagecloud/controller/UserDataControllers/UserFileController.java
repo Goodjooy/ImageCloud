@@ -218,9 +218,11 @@ public class UserFileController {
                 if (!user.getAllItems().contains(item)) {
                     item.setParentID(lastID);
                     itemRepository.save(item);
+                    user.addItem(item);
                 }
                 lastID = item.getId();
             }
+
             logger.info(String.format("User<%s|%s> Create path %s Success!", user.getName(), user.getEmailAddress(), path));
             return new Result<>(true);
         } catch (UserNotFoundException | RootPathNotExistException e) {
