@@ -42,7 +42,7 @@ public class Item {
     @Transient
     private Set<Item> SubItems;
 
-    @OneToOne(mappedBy = "item")
+    @OneToOne(mappedBy = "item",fetch = FetchType.LAZY)
     public FileStorage file;
 
     @Column(nullable = false)
@@ -132,9 +132,6 @@ public class Item {
         return targetItem;
     }
     public void setParentItem(Item item){
-        if (item.hidden){
-            this.hidden= true;
-        }
         parentID= item.getId();
     }
     public void setSameParentItem(Item sameParentItem){
@@ -185,7 +182,4 @@ public class Item {
         return parentID;
     }
 
-    public void setParentID(Integer parentID) {
-        this.parentID = parentID;
-    }
 }

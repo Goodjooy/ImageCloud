@@ -94,4 +94,16 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
       | :--: | :--: | :--: | :--: | :--: |
-      |POST | oldPath={*targetFileOrDirPath*}&<br>newName={*newNameOfTargetFileOrDir*} | oldPath->目標文件或文件夾路徑（包括文件或文件夾）;<br>newName->目標文件或文件夾的新名稱（不包含路徑） | 將指定位置的文件或者文件夾重命名<br>*路徑以```/root```開頭* | USER |
+      | POST | oldPath={*targetFileOrDirPath*}&<br>newName={*newNameOfTargetFileOrDir*} | oldPath->目標文件或文件夾路徑（包括文件或文件夾）;<br>newName->目標文件或文件夾的新名稱（不包含路徑） | 將指定位置的文件或者文件夾重命名<br>*路徑以```/root```開頭* | USER |
+* ```/file-status```
+  * 改变文件夹或者文件状态
+  * 参数列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
+      | :--: | :--: | :--: | :--: | :--: |
+      | POST | path={*targetFileTochangeStatus*} | 要改变状态的文件夹或者文件<br>**不会影响子文件夹和文件的状态** | USER |
+* ```/restore-file```
+  * 恢复浅层删除的文件或者文件夹
+  * 参数列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
+      | :--: | :--: | :--: | :--: | :--: |
+      | POST | path={*targetFileTochangeStatus*} | 要恢复的文件夹或者文件<br>**不会恢复子文件夹和文件的状态** | USER |

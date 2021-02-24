@@ -30,17 +30,20 @@ public class User {
     private Set<Item> masterFiles;
 
     //@JsonIgnore
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user",fetch = FetchType.LAZY)
     public UserInformation information;
 
-    @OneToOne(mappedBy = "user")
+    @OneToOne(mappedBy = "user",fetch = FetchType.LAZY)
     public UserImage image;
 
     @Transient
     private Item rootItem;
 
-    public void constructItem(boolean withHidden) {
-        setRootItem(generateItemStruct(getAllItems(), withHidden));
+    public  void constructItem(boolean withHidden){
+        setRootItem(generateItemStruct(getAllItems(), withHidden,false));
+    }
+    public void constructItem(boolean withHidden,boolean withRemoved) {
+        setRootItem(generateItemStruct(getAllItems(), withHidden,withRemoved));
     }
 
     public Integer getID() {
@@ -107,34 +110,38 @@ public class User {
         this.emailAddress = emailAddress;
     }
 
-    private Item generateItemStruct(Set<Item> items, boolean withHidden) {
+    private Item generateItemStruct(Set<Item> items, boolean withHidden,boolean withRemoved) {
         Item root;
-        var rootItems = findAllSUbItem(items, -1, withHidden);
+        var rootItems = findAllSUbItem(items, -1, withHidden,withRemoved);
         if (!rootItems.isEmpty()) {
             root = (Item) rootItems.toArray()[0];
 
-            root.setSubItems(generateSubStruct(items, root, withHidden));
-            return root;
+            root.setSubItems(generateSubStruct(items, root, withHidden,withRemoved));
         } else {
             root = new Item();
-            return root;
         }
+        return root;
     }
 
-    private Set<Item> generateSubStruct(Set<Item> items, Item parentItem, boolean withHidden) {
-        var SubItems = findAllSUbItem(items, parentItem.getId(), withHidden);
+    private Set<Item> generateSubStruct(Set<Item> items, Item parentItem, boolean withHidden,boolean withRemoved) {
+        var SubItems = findAllSUbItem(items, parentItem.getId(), withHidden,withRemoved);
         for (Item item : SubItems) {
-            item.setSubItems(generateSubStruct(items, item, withHidden));
+            item.setSubItems(generateSubStruct(items, item, withHidden,withRemoved));
         }
         return SubItems;
     }
 
-    private Set<Item> findAllSUbItem(Set<Item> items, int parent, boolean withHidden) {
+    private Set<Item> findAllSUbItem(Set<Item> items, int parent){
+        return findAllSUbItem(items,parent,true,false);
+    }
+    private Set<Item> findAllSUbItem(Set<Item> items, int parent, boolean withHidden,boolean withRemoved) {
         Set<Item> target = new HashSet<>();
         for (Item item : items) {
-            if (item.getParentID() == parent &&
-                    !item.isRemoved &&
-                    (withHidden || !item.hidden)) {
+            if (item.getParentID() == parent) {
+                if(!withHidden&&item.hidden)
+                    continue;
+                if(!withRemoved&&item.isRemoved)
+                    continue;
                 target.add(item);
             }
         }
