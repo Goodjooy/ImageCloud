@@ -23,4 +23,14 @@ public class UserInformation {
     @Column(nullable = false)
     public Long usedSize = 0L;
 
+    public Long availableSize() {
+        return totalSize - usedSize;
+    }
+
+    public void AppendSize(Long size) {
+        var t = usedSize + size;
+        t = t < 0 ? 0 : t;
+        usedSize = t;
+    }
+
 }

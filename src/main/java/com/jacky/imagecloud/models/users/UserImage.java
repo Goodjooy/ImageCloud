@@ -16,6 +16,8 @@ public class UserImage {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
 
+    private Boolean setHeaded;
+
     @JsonIgnore
     @Column(nullable = false, length = 64)
     private String fileName;
@@ -34,6 +36,14 @@ public class UserImage {
 
     public String getFIleX64URL() {
         return String.format("/head64/%s", fileName);
+    }
+
+    public String getFIleX32URL() {
+        return String.format("/head32/%s", fileName);
+    }
+
+    public String getFIleX16URL() {
+        return String.format("/head16/%s", fileName);
     }
 
 
@@ -59,5 +69,13 @@ public class UserImage {
 
     public String getFileName() {
         return fileName;
+    }
+
+    public Boolean getSetHeaded() {
+        return setHeaded;
+    }
+
+    public void setSetHeaded(Boolean setHeaded) {
+        this.setHeaded = setHeaded;
     }
 }

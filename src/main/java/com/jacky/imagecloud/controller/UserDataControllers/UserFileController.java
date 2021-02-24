@@ -90,6 +90,9 @@ public class UserFileController {
             var user = getAndInitUser(authentication);
             var items = GetItemString(path, user.getRootItem());
 
+            if (user.information.availableSize() < file.getSize()) return new Result<>(
+                    String.format("user space<%d|%d> not enough",
+                            user.information.availableSize(), file.getSize()));
             if (file.isEmpty()) return new Result<>("empty file");
 
             Integer lastID = -1;
@@ -115,7 +118,7 @@ public class UserFileController {
 
             user.addItem(lastItem);
 
-            user.information.usedSize += file.getSize();
+            user.information.AppendSize(file.getSize());
 
             fileStorageRepository.save(fileStorage);
             itemRepository.save(lastItem);
@@ -153,7 +156,7 @@ public class UserFileController {
                 case FILE: {
                     //删除文件
                     var size = fileUploader.delete(target.file.filePath);
-                    user.information.usedSize -= size;
+                    user.information.AppendSize(-size);
 
                     deleteItem(target);
 
@@ -170,7 +173,7 @@ public class UserFileController {
                                 //删除文件
 
                                 var size = item.file == null ? 0 : fileUploader.delete(item.file.filePath);
-                                user.information.usedSize -= size;
+                                user.information.AppendSize(-size);
 
                                 deleteItem(item);
                                 break;
@@ -233,7 +236,7 @@ public class UserFileController {
                                      @RequestParam(name = "oldPath", defaultValue = "/root") String oldFilePath,
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
         var temp = getFile(authentication, oldFilePath);
-        if (!temp.err ) {
+        if (!temp.err) {
             temp.data.setItemName(newName);
             itemRepository.save(temp.data);
 
@@ -248,18 +251,18 @@ public class UserFileController {
     /**
      * 检查文件操作异常状态
      */
-    private void fileOperateCheck(){
-        var RawFiles=fileUploader.loadAll();
+    private void fileOperateCheck() {
+        var RawFiles = fileUploader.loadAll();
 
-        var allFiles=fileStorageRepository.findAll();
-        var allFilesName=List.of(allFiles.stream().map(fileStorage -> fileStorage.filePath).toArray());
+        var allFiles = fileStorageRepository.findAll();
+        var allFilesName = List.of(allFiles.stream().map(fileStorage -> fileStorage.filePath).toArray());
 
-        var RawRemove=RawFiles.filter(path -> !allFilesName.contains(path.getFileName().toString()));
+        var RawRemove = RawFiles.filter(path -> !allFilesName.contains(path.getFileName().toString()));
 
         //remove
-        var fileSizes=RawRemove.map(path -> fileUploader.delete(path.getFileName().toString()));
-        var sum=fileSizes.reduce(0L, Long::sum);
-        logger.info(String.format("Exception remove file %d",sum));
+        var fileSizes = RawRemove.map(path -> fileUploader.delete(path.getFileName().toString()));
+        var sum = fileSizes.reduce(0L, Long::sum);
+        logger.info(String.format("Exception remove file %d", sum));
     }
 
 

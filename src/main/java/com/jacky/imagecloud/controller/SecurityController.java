@@ -3,10 +3,7 @@ package com.jacky.imagecloud.controller;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.items.*;
-import com.jacky.imagecloud.models.users.User;
-import com.jacky.imagecloud.models.users.UserInformation;
-import com.jacky.imagecloud.models.users.UserInformationRepository;
-import com.jacky.imagecloud.models.users.UserRepository;
+import com.jacky.imagecloud.models.users.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +38,8 @@ public class SecurityController {
     ItemRepository itemRepository;
     @Autowired
     UserInformationRepository informationRepository;
+    @Autowired
+    private UserImageRepository imageRepository;
 
     @GetMapping("/sign-in")
     public String getSignInPage() {
@@ -96,11 +95,13 @@ public class SecurityController {
             Item rootItem = new Item();
             User user = new User();
             UserInformation information = new UserInformation();
+            UserImage image=new UserImage();
 
             user.setEmailAddress(emailAddress);
             user.setName(name);
             user.setPassword(encoder.encode(passWord));
             user.setRootItem(rootItem);
+            user.image=image;
 
             rootItem.setItemName("root");
             rootItem.setItemType(ItemType.DIR);
@@ -110,10 +111,12 @@ public class SecurityController {
             user.addItem(rootItem);
 
             information.user = user;
+            image.setUser(user);
 
             userRepository.save(user);
             itemRepository.save(rootItem);
             informationRepository.save(information);
+            imageRepository.save(image);
 
             logger.info(String.format("sign up new user->[email:%s][name:%s][rawPassword:%s]", emailAddress,
                     name, passWord));
