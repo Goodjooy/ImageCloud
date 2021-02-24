@@ -1,7 +1,6 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
 import com.jacky.imagecloud.FileStorage.FileSystemStorageService;
-import com.jacky.imagecloud.FileStorage.FileUploader;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
 import com.jacky.imagecloud.err.UnknownItemTypeException;
@@ -9,7 +8,6 @@ import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
-import org.apache.catalina.LifecycleState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,10 +66,11 @@ public class UserFileController {
 
     @GetMapping(path = "/file")
     public Result<Item> getFile(Authentication authentication,
-                                @RequestParam(name = "path", defaultValue = "root") String path) {
+                                @RequestParam(name = "path", defaultValue = "root") String path,
+                                @RequestParam(name = "withHidden",defaultValue = "false")boolean withHidden) {
         try {
             var user = getAndInitUser(authentication);
-            var item = user.getRootItem().GetTargetItem(path);
+            var item = user.getRootItem().GetTargetItem(path,withHidden);
 
             logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.getEmailAddress(), user.getName(), path));
             return new Result<>(item);
@@ -84,11 +83,12 @@ public class UserFileController {
     @PostMapping(path = "/file")
     public Result<Boolean> uploadFile(Authentication authentication,
                                       @RequestParam(name = "path") String path,
-                                      @RequestParam(name = "file") MultipartFile file) {
+                                      @RequestParam(name = "file") MultipartFile file,
+                                      @RequestParam(name = "hidden",defaultValue = "false")Boolean hidden) {
 
         try {
             var user = getAndInitUser(authentication);
-            var items = GetItemString(path, user.getRootItem());
+            var items = GetItemTree(path, user.getRootItem(),hidden);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
@@ -106,11 +106,12 @@ public class UserFileController {
                 lastID = item.getId();
             }
 
-            var lastItem = new Item();
+            var lastItem = Item.DefaultItem();
             lastItem.setItemName(file.getOriginalFilename());
             lastItem.setItemType(ItemType.FILE);
             lastItem.setUser(user);
             lastItem.setParentID(items.getLast().getId());
+            lastItem.hidden=hidden;
 
             var fileStorage = fileUploader.storage(file);
             fileStorage.item = lastItem;
@@ -139,6 +140,7 @@ public class UserFileController {
     @DeleteMapping(path = "/file")
     public Result<Boolean> deleteFile(Authentication authentication,
                                       @RequestParam(name = "path", defaultValue = "/root") String path,
+                                      @RequestParam(name = "flat")boolean flatRemove,
                                       @RequestParam(name = "paswd", defaultValue = "") String password
     ) {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
@@ -150,7 +152,7 @@ public class UserFileController {
 
             var rootItem = user.getRootItem();
 
-            var target = rootItem.GetTargetItem(path);
+            var target = rootItem.GetTargetItem(path,true);
 
             switch (target.getItemType()) {
                 case FILE: {
@@ -207,10 +209,11 @@ public class UserFileController {
 
     @PostMapping(path = "/dir")
     public Result<Boolean> createDir(Authentication authentication,
-                                     @RequestParam(name = "path", defaultValue = "/root") String path) {
+                                     @RequestParam(name = "path", defaultValue = "/root") String path,
+                                     @RequestParam(name = "hidden",defaultValue = "false")Boolean hidden) {
         try {
             var user = getAndInitUser(authentication);
-            var items = GetItemString(path, user.getRootItem());
+            var items = GetItemTree(path, user.getRootItem(),hidden);
 
             Integer lastID = -1;
             for (Item item :
@@ -235,7 +238,7 @@ public class UserFileController {
     public Result<String> fileRename(Authentication authentication,
                                      @RequestParam(name = "oldPath", defaultValue = "/root") String oldFilePath,
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
-        var temp = getFile(authentication, oldFilePath);
+        var temp = getFile(authentication, oldFilePath,true);
         if (!temp.err) {
             temp.data.setItemName(newName);
             itemRepository.save(temp.data);
@@ -286,19 +289,19 @@ public class UserFileController {
 
     }
 
-    private LinkedList<Item> GetItemString(String path, Item root) throws RootPathNotExistException {
+    private LinkedList<Item> GetItemTree(String path, Item root,boolean withHidden) throws RootPathNotExistException {
         var items = new LinkedList<Item>();
         var groups = root.splitPath(path);
 
         Item temp = root;
         for (String p :
                 groups) {
-            var t = temp.findTargetItem(temp, p);
+            var t = temp.findTargetItem(temp, p,withHidden);
             if (t != null) {
                 items.add(t);
                 temp = t;
             } else {
-                t = new Item();
+                t = Item.DefaultItem();
                 t.setItemName(p);
                 t.setUser(root.getUser());
                 t.setItemType(ItemType.DIR);

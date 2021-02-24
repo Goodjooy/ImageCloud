@@ -21,7 +21,7 @@ public class Item {
     private Integer id;
 
     @JsonIgnore
-    public Boolean isRemoved=false;
+    public Boolean isRemoved;
 
     @Column(name = "item_name", nullable = false, length = 128)
     private String ItemName;
@@ -45,7 +45,17 @@ public class Item {
     @OneToOne(mappedBy = "item")
     public FileStorage file;
 
+    @Column(nullable = false)
+    public  Boolean hidden;
+
     public Item() {
+    }
+
+    public  static Item DefaultItem(){
+        Item item=new Item();
+        item.hidden=false;
+        item.isRemoved=false;
+        return item;
     }
 
     @JsonIgnore
@@ -69,14 +79,14 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item GetTargetItem(@NotNull String path) throws FileNotFoundException, RootPathNotExistException {
+    public Item GetTargetItem(@NotNull String path,boolean withHidden) throws FileNotFoundException, RootPathNotExistException {
 
         var pathGroup = splitPath(path);
 
         Item temp = this;
         for (String p :
                 pathGroup) {
-            temp = findTargetItem(temp, p);
+            temp = findTargetItem(temp, p,withHidden);
             if (temp == null) {
                 throw new FileNotFoundException(String.format("path: `%s` not exist", path));
             }
@@ -98,7 +108,7 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item findTargetItem(Item item, String path) {
+    public Item findTargetItem(Item item, String path,boolean withHidden) {
         if(item.ItemName.equals(path))
             return item;
         for (Item subItem :
