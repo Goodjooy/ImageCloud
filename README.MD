@@ -37,7 +37,7 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
       | :--: | :--: | :--: | :--: | :--: |
-      |POST | email={*emailAdress*}|email->要檢查的email地址 | 檢查email是否已經被使用 | 所有人|
+      |POST | email={*emailAddress*}|email->要檢查的email地址 | 檢查email是否已經被使用以及是否为合法email | 所有人|
 
 ### **File System**
 
@@ -79,16 +79,16 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
       | :--: | :--: | :--: | :--: | :--: |
-      | GET | path={*tragetPath*} | path->要獲取的文件夾或者文件信息的路徑 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭* | USER |
-      | POST | path={*fileUploadDirPath*}&<br>file={*fileToUpload*} | path->文件上傳的位置（不包含文件名）;<br>file->要上傳的文件 | 將文件上傳到指定位置<br>*路徑以```/root```開頭*<br>*如果路徑不存在，將會自動創建文件夾* | USER |
-      | DELETE | path={*tragetPathToRemove*}&<br>paswd={*userPassword*} | path->要刪除的文件夾或文件;<br>paswd->用戶密碼 | 將指定位置文件或文件夾刪除<br>*路徑以```/root```開頭*<br>*如果是文件夾，文件夾内子文件夾和文件將被全部刪除*<br>*如果是文件夾并且```path```以“```/```”結尾，將只清空目標文件夾，否則目標文件夾將一并刪除* | USER |
+      | GET | path={*targetPath*}&withHidden={*ignoreHiddenItems*:**false**} | path->要獲取的文件夾或者文件信息的路徑;<br>withHidden(boolean)->是否忽略隐藏文件 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭* | USER |
+      | POST | path={*fileUploadDirPath*}&<br>file={*fileToUpload*}&<br>hidden={*createHiddenFiles*:**false**} | path->文件上傳的位置（不包含文件名）;<br>file->要上傳的文件;<br>hidden(bool)->是否创建隐藏文件 | 將文件上傳到指定位置<br>*路徑以```/root```開頭*<br>*如果路徑不存在，將會自動創建文件夾* | USER |
+      | DELETE | path={*targetPathToRemove*}&<br>paswd={*userPassword*}&<br>flat={*removeFlatly*:**true**}&<br>removeTargetDir={*removeTargetDir*:**false**} | path->要刪除的文件夾或文件;<br>paswd->用戶密碼;<br>flat(bool)->是否为浅层删除；<br>removeTargetDir(bool)->是否删除指定的文件夹 | 將指定位置文件或文件夾刪除<br>*路徑以```/root```開頭*<br>*浅层删除不会删除服务器文件，未来可能提供接口供恢复* | USER |
 
 * ```/dir```
   * 創建文件夾接口
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
       | :--: | :--: | :--: | :--: | :--: |
-      | POST | path={*pathToCreate*} | path->要被創建的目錄路徑 | 創建指定路徑上全部缺失文件夾<br>*路徑以```/root```開頭* | USER |
+      | POST | path={*pathToCreate*}&<br>hidden={*createHiddenDir*:**false**} | path->要被創建的目錄路徑;<br>hidden(bool)->创建的文件夹为隐藏文件夹 | 創建指定路徑上全部缺失文件夾<br>*路徑以```/root```開頭* | USER |
 * ```/rename```
   * 創建文件夾接口
   * 參數列表

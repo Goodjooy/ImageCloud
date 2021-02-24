@@ -34,7 +34,7 @@ import java.util.List;
  * /walk GET 返回全部文件的嵌套结构
  * <p>
  * /file?path=<path:string> GET 如果是文件夹，返回子文件夹结构【item】 ；如果是文件，返回对应item
- * /file/file-upload POST 上传文件 到指定位置 [自动创建文件夹]path=<path:string>&file=[targetfile]
+ * /file/file-upload POST 上传文件 到指定位置 [自动创建文件夹]path=<path:string>&file=[targetFile]
  * /file?path=<path:string> DELETE 删除文件/文件夹
  */
 @RestController
@@ -69,7 +69,7 @@ public class UserFileController {
                                 @RequestParam(name = "path", defaultValue = "root") String path,
                                 @RequestParam(name = "withHidden",defaultValue = "false")boolean withHidden) {
         try {
-            var user = getAndInitUser(authentication);
+            var user = getAndInitUser(authentication,withHidden);
             var item = user.getRootItem().GetTargetItem(path,withHidden);
 
             logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.getEmailAddress(), user.getName(), path));
@@ -88,29 +88,19 @@ public class UserFileController {
 
         try {
             var user = getAndInitUser(authentication);
-            var items = GetItemTree(path, user.getRootItem(),hidden);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
                             user.information.availableSize(), file.getSize()));
             if (file.isEmpty()) return new Result<>("empty file");
 
-            Integer lastID = -1;
-            for (Item item :
-                    items) {
-                if (!user.getAllItems().contains(item)) {
-                    item.setParentID(lastID);
-                    user.addItem(item);
-                    itemRepository.save(item);
-                }
-                lastID = item.getId();
-            }
+            Item last =appendNotExistItems(user,path,hidden);
 
             var lastItem = Item.DefaultItem();
             lastItem.setItemName(file.getOriginalFilename());
             lastItem.setItemType(ItemType.FILE);
             lastItem.setUser(user);
-            lastItem.setParentID(items.getLast().getId());
+            lastItem.setParentItem(last);
             lastItem.hidden=hidden;
 
             var fileStorage = fileUploader.storage(file);
@@ -140,12 +130,13 @@ public class UserFileController {
     @DeleteMapping(path = "/file")
     public Result<Boolean> deleteFile(Authentication authentication,
                                       @RequestParam(name = "path", defaultValue = "/root") String path,
-                                      @RequestParam(name = "flat")boolean flatRemove,
-                                      @RequestParam(name = "paswd", defaultValue = "") String password
+                                      @RequestParam(name = "flat",defaultValue = "true")boolean flatRemove,
+                                      @RequestParam(name = "paswd", defaultValue = "") String password,
+                                      @RequestParam(name = "removeTargetDir",defaultValue = "false")boolean removeTargetDir
     ) {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
-            User user = getAndInitUser(authentication);
+            User user = getAndInitUser(authentication,false);
 
             if (!encoder.matches(password, user.getPasswordHash())) return new Result<>("wrong password!");
             if (path.equals("/root")) return new Result<>("can not remove /root dir");
@@ -157,10 +148,11 @@ public class UserFileController {
             switch (target.getItemType()) {
                 case FILE: {
                     //删除文件
-                    var size = fileUploader.delete(target.file.filePath);
-                    user.information.AppendSize(-size);
-
-                    deleteItem(target);
+                    if(!flatRemove) {
+                        var size = fileUploader.delete(target.file.filePath);
+                        user.information.AppendSize(-size);
+                    }
+                    deleteItem(target,flatRemove);
 
                     userRepository.save(user);
                     break;
@@ -173,21 +165,21 @@ public class UserFileController {
                         switch (item.getItemType()) {
                             case FILE: {
                                 //删除文件
-
-                                var size = item.file == null ? 0 : fileUploader.delete(item.file.filePath);
-                                user.information.AppendSize(-size);
-
-                                deleteItem(item);
+                                if(!flatRemove) {
+                                    var size = item.file == null ? 0 : fileUploader.delete(item.file.filePath);
+                                    user.information.AppendSize(-size);
+                                }
+                                deleteItem(item,flatRemove);
                                 break;
                             }
                             case DIR: {
-                                deleteItem(item);
+                                deleteItem(item,flatRemove);
                                 break;
                             }
                         }
                     }
-                    if (!path.endsWith("/"))
-                        deleteItem(target);
+                    if (removeTargetDir)
+                        deleteItem(target,flatRemove);
                     userRepository.save(user);
                     break;
                 }
@@ -212,19 +204,9 @@ public class UserFileController {
                                      @RequestParam(name = "path", defaultValue = "/root") String path,
                                      @RequestParam(name = "hidden",defaultValue = "false")Boolean hidden) {
         try {
-            var user = getAndInitUser(authentication);
-            var items = GetItemTree(path, user.getRootItem(),hidden);
+            var user = getAndInitUser(authentication,false);
 
-            Integer lastID = -1;
-            for (Item item :
-                    items) {
-                if (!user.getAllItems().contains(item)) {
-                    item.setParentID(lastID);
-                    itemRepository.save(item);
-                    user.addItem(item);
-                }
-                lastID = item.getId();
-            }
+            appendNotExistItems(user,path,hidden);
             userRepository.save(user);
             logger.info(String.format("User<%s|%s> Create path %s Success!", user.getName(), user.getEmailAddress(), path));
             return new Result<>(true);
@@ -270,6 +252,10 @@ public class UserFileController {
 
 
     private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
+        return getAndInitUser(authentication, false);
+    }
+
+    private User getAndInitUser(Authentication authentication, boolean withHidden) throws UserNotFoundException {
         String emailAddress = authentication.getName();
         User user = new User();
         user.setEmailAddress(emailAddress);
@@ -280,7 +266,7 @@ public class UserFileController {
 
         if (result.isPresent()) {
             user = result.get();
-            user.constructItem();
+            user.constructItem(withHidden);
 
             logger.info(String.format("organization User<%s|%s> data struct success!", user.getEmailAddress(), user.getName()));
             return user;
@@ -296,7 +282,7 @@ public class UserFileController {
         Item temp = root;
         for (String p :
                 groups) {
-            var t = temp.findTargetItem(temp, p,withHidden);
+            var t = temp.findTargetItem(p,withHidden);
             if (t != null) {
                 items.add(t);
                 temp = t;
@@ -306,7 +292,7 @@ public class UserFileController {
                 t.setUser(root.getUser());
                 t.setItemType(ItemType.DIR);
                 //连接上一个
-                t.setParentID(items.getLast().getParentID());
+                t.setSameParentItem(items.getLast());
 
                 items.add(t);
             }
@@ -315,17 +301,32 @@ public class UserFileController {
 
     }
 
-    public void deleteItem(Item item) {
-        if (item.getItemType() == ItemType.FILE && item.file != null) {
-            fileStorageRepository.deleteById(item.file.id);
+    private void deleteItem(Item item,boolean flatRemove) {
+        if (!flatRemove) {
+            if (item.getItemType() == ItemType.FILE && item.file != null) {
+                fileStorageRepository.deleteById(item.file.id);
+            }
+            var user = item.getUser();
+            user.getAllItems().remove(item);
         }
-        var user = item.getUser();
-        user.getAllItems().remove(item);
-
-        item.isRemoved = true;
+        item.isRemoved=true;
         itemRepository.save(item);
-
-        logger.info(String.format("Remove file success<%s>", item.getItemName()));
+        logger.info(String.format("Remove file success<%s> [totally]", item.getItemName()));
     }
+    private Item appendNotExistItems(User user,String path,boolean hidden) throws RootPathNotExistException {
+        var items = GetItemTree(path, user.getRootItem(),hidden);
+        Item lastItem = Item.DefaultItem();
+        for (Item item :
+                items) {
+            if (!user.getAllItems().contains(item)) {
+                item.setParentItem(lastItem);
+                user.addItem(item);
+                itemRepository.save(item);
+            }
+            lastItem = item;
+        }
+        return lastItem;
+    }
+
 
 }

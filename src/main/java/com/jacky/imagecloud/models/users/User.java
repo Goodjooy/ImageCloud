@@ -39,8 +39,8 @@ public class User {
     @Transient
     private Item rootItem;
 
-    public void constructItem() {
-        setRootItem(generateItemStruct(getAllItems()));
+    public void constructItem(boolean withHidden) {
+        setRootItem(generateItemStruct(getAllItems(), withHidden));
     }
 
     public Integer getID() {
@@ -79,7 +79,8 @@ public class User {
     public void setPassword(String password) {
         this.passWdHash = password;
     }
-    public void addItem(Item ...items){
+
+    public void addItem(Item... items) {
         addItems(Arrays.asList(items));
     }
 
@@ -89,8 +90,8 @@ public class User {
     }
 
     public void addItems(Iterable<Item> items) {
-        if (masterFiles==null){
-            masterFiles=new HashSet<>();
+        if (masterFiles == null) {
+            masterFiles = new HashSet<>();
         }
         for (Item item : items) {
             if (!item.isRemoved)
@@ -106,13 +107,13 @@ public class User {
         this.emailAddress = emailAddress;
     }
 
-    private Item generateItemStruct(Set<Item> items) {
+    private Item generateItemStruct(Set<Item> items, boolean withHidden) {
         Item root;
-        var rootItems = findAllSUbItem(items, -1);
+        var rootItems = findAllSUbItem(items, -1, withHidden);
         if (!rootItems.isEmpty()) {
             root = (Item) rootItems.toArray()[0];
 
-            root.setSubItems(generateSubStruct(items, root));
+            root.setSubItems(generateSubStruct(items, root, withHidden));
             return root;
         } else {
             root = new Item();
@@ -120,18 +121,20 @@ public class User {
         }
     }
 
-    private Set<Item> generateSubStruct(Set<Item> items, Item parentItem) {
-        var SubItems = findAllSUbItem(items, parentItem.getId());
+    private Set<Item> generateSubStruct(Set<Item> items, Item parentItem, boolean withHidden) {
+        var SubItems = findAllSUbItem(items, parentItem.getId(), withHidden);
         for (Item item : SubItems) {
-            item.setSubItems(generateSubStruct(items, item));
+            item.setSubItems(generateSubStruct(items, item, withHidden));
         }
         return SubItems;
     }
 
-    private Set<Item> findAllSUbItem(Set<Item> items, int parent) {
+    private Set<Item> findAllSUbItem(Set<Item> items, int parent, boolean withHidden) {
         Set<Item> target = new HashSet<>();
         for (Item item : items) {
-            if (item.getParentID() == parent && !item.isRemoved) {
+            if (item.getParentID() == parent &&
+                    !item.isRemoved &&
+                    (withHidden || !item.hidden)) {
                 target.add(item);
             }
         }

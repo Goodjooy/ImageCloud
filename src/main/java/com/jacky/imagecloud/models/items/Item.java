@@ -35,7 +35,7 @@ public class Item {
     private User user;
 
     @JsonIgnore
-    @Column(name = "parent", nullable = true)
+    @Column(name = "parent")
     private Integer parentID;
 
     // @JsonIgnore
@@ -46,31 +46,35 @@ public class Item {
     public FileStorage file;
 
     @Column(nullable = false)
-    public  Boolean hidden;
+    public Boolean hidden;
 
     public Item() {
     }
 
-    public  static Item DefaultItem(){
-        Item item=new Item();
-        item.hidden=false;
-        item.isRemoved=false;
+    public static Item DefaultItem() {
+        Item item = new Item();
+        item.hidden = false;
+        item.isRemoved = false;
+        return item;
+    }
+    public static Item RootItem(){
+        Item item=DefaultItem();
+        item.itemType=ItemType.DIR;
+        item.parentID=-1;
         return item;
     }
 
     @JsonIgnore
-    public LinkedList<Item>getAllSubItem(){
-        var items=new LinkedList<Item>();
+    public LinkedList<Item> getAllSubItem() {
+        var items = new LinkedList<Item>();
         for (Item item :
                 SubItems) {
-            switch (item.itemType){
-                case DIR:
-                {
+            switch (item.itemType) {
+                case DIR: {
                     items.addAll(item.getAllSubItem());
                     break;
                 }
-                case FILE:
-                {
+                case FILE: {
                     items.add(item);
                 }
             }
@@ -79,14 +83,14 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item GetTargetItem(@NotNull String path,boolean withHidden) throws FileNotFoundException, RootPathNotExistException {
+    public Item GetTargetItem(@NotNull String path, boolean withHidden) throws FileNotFoundException, RootPathNotExistException {
 
         var pathGroup = splitPath(path);
 
         Item temp = this;
         for (String p :
                 pathGroup) {
-            temp = findTargetItem(temp, p,withHidden);
+            temp = temp.findTargetItem( p, withHidden);
             if (temp == null) {
                 throw new FileNotFoundException(String.format("path: `%s` not exist", path));
             }
@@ -95,11 +99,11 @@ public class Item {
     }
 
     @JsonIgnore
-    public String[]splitPath(String path) throws RootPathNotExistException {
+    public String[] splitPath(String path) throws RootPathNotExistException {
         if (path.startsWith("/"))
-            path=path.substring(1);
-        if(path.endsWith("/"))
-            path=path.substring(0,path.length()-1);
+            path = path.substring(1);
+        if (path.endsWith("/"))
+            path = path.substring(0, path.length() - 1);
 
         var groups = path.split("/");
 
@@ -108,16 +112,33 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item findTargetItem(Item item, String path,boolean withHidden) {
-        if(item.ItemName.equals(path))
-            return item;
+    public Item findTargetItem(String path, boolean withHidden) {
+        Item targetItem = null;
+
+        if (ItemName.equals(path))
+            targetItem = this;
+
         for (Item subItem :
-                item.SubItems) {
+                SubItems) {
             if (subItem.ItemName.equals(path)) {
-                return subItem;
+                targetItem = subItem;
+                break;
             }
         }
-        return null;
+        if (!withHidden && targetItem != null && targetItem.hidden) {
+            targetItem = null;
+        }
+
+        return targetItem;
+    }
+    public void setParentItem(Item item){
+        if (item.hidden){
+            this.hidden= true;
+        }
+        parentID= item.getId();
+    }
+    public void setSameParentItem(Item sameParentItem){
+        parentID=sameParentItem.getParentID();
     }
 
     public Set<Item> getSubItems() {

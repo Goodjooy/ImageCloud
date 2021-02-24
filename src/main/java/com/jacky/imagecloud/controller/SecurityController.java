@@ -92,7 +92,7 @@ public class SecurityController {
         if (name.length() > 16 || name.length() == 0)
             return new Result<>("user `name` length out of size [1,16]");
         try {
-            Item rootItem = new Item();
+            Item rootItem = Item.RootItem();
             User user = new User();
             UserInformation information = new UserInformation();
             UserImage image=new UserImage();
@@ -103,9 +103,6 @@ public class SecurityController {
             user.setRootItem(rootItem);
             user.image=image;
 
-            rootItem.setItemName("root");
-            rootItem.setItemType(ItemType.DIR);
-            rootItem.setParentID(-1);
             rootItem.setUser(user);
 
             user.addItem(rootItem);
