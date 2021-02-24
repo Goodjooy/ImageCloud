@@ -71,10 +71,7 @@ public class UserFileController {
                                 @RequestParam(name = "path", defaultValue = "root") String path) {
         try {
             var user = getAndInitUser(authentication);
-
             var item = user.getRootItem().GetTargetItem(path);
-
-            fileOperateCheck();
 
             logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.getEmailAddress(), user.getName(), path));
             return new Result<>(item);
@@ -222,7 +219,7 @@ public class UserFileController {
                 }
                 lastID = item.getId();
             }
-
+            userRepository.save(user);
             logger.info(String.format("User<%s|%s> Create path %s Success!", user.getName(), user.getEmailAddress(), path));
             return new Result<>(true);
         } catch (UserNotFoundException | RootPathNotExistException e) {

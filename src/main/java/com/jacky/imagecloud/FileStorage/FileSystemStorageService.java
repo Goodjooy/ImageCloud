@@ -3,9 +3,7 @@ package com.jacky.imagecloud.FileStorage;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,10 +48,26 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         this.init();
     }
 
+    public ByteArrayOutputStream copyStream(InputStream inputStream){
+        ByteArrayOutputStream byteArrayInputStream=new ByteArrayOutputStream();
+        try {
+            byte []buffer=new byte[inputStream.available()];
+            int len;
+            len=inputStream.read(buffer);
+            byteArrayInputStream.write(buffer);
+            byteArrayInputStream.flush();
+            return byteArrayInputStream;
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new StorageException("failure to storage file",e);
+        }
+    }
+
     public void SaveImageWithThumbnail(InputStream inputStream,
                                        @NotNull String fileName,
                                        @NotNull String fileExtra) throws IOException {
-        var RawImage = ImageIO.read(inputStream);
+        var copyStream=copyStream(inputStream);
+        var RawImage = ImageIO.read(new ByteArrayInputStream(copyStream.toByteArray()));
         int width = RawImage.getWidth();
         int height = RawImage.getHeight();
         int flag = RawImage.getType();
@@ -82,7 +96,8 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             throw new StorageException("Cannot store file outside current directory.");
 
 
-        ImageIO.write(RawImage, fileExtra, RawPath.toFile());
+        //ImageIO.write(RawImage, fileExtra, RawPath.toFile());
+        Files.copy(new ByteArrayInputStream(copyStream.toByteArray()),RawPath,StandardCopyOption.REPLACE_EXISTING);
         ImageIO.write((RenderedImage) ThumbnailImage, fileExtra, ThumbnailPath.toFile());
     }
 

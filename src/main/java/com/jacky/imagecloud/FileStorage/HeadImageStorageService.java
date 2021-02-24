@@ -3,8 +3,15 @@ package com.jacky.imagecloud.FileStorage;
 import com.jacky.imagecloud.models.users.UserImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
@@ -17,7 +24,11 @@ public class HeadImageStorageService implements FileUploader<UserImage>{
 
     @Override
     public void init() {
-
+        try {
+            Files.createDirectories(localPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -38,6 +49,7 @@ public class HeadImageStorageService implements FileUploader<UserImage>{
     @Override
     public Resource loadAsResource(String filePath) {
         return null;
+
     }
 
     @Override

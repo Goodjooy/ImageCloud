@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 @Controller
 public class SecurityController {
     private final Logger logger = LoggerFactory.getLogger(SecurityController.class);
-    private final Pattern emailPattern = Pattern.compile("^([a-z0-9A-Z]+[-|\\\\.]?)+[a-z0-9A-Z]@([a-z0-9A-Z]+(-[a-z0-9A-Z]+)?\\\\.)+[a-zA-Z]{2,}$");
+    private final Pattern emailPattern = Pattern.compile("^([a-zA-Z0-9]+([-|.])?)+@([a-zA-Z0-9]+(-[a-zA-Z0-9]+)?\\.)+[a-zA-Z]{2,}$");
 
     PasswordEncoder encoder = new BCryptPasswordEncoder();
     @Autowired
@@ -62,8 +62,8 @@ public class SecurityController {
     public Result<Boolean> CheckEmailExist(
             @RequestParam(name = "email") String emailAddress
     ) {
-        var matcher = emailAddress.matches(emailAddress);
-        if (!matcher) {
+        var matcher = emailPattern.matcher(emailAddress);
+        if (!matcher.matches()) {
             return new Result<>("bad email address");
         }
         User user = new User();

@@ -17,20 +17,23 @@ public class UserImage {
     private User user;
 
     @JsonIgnore
-    @Column(nullable = false,length = 64)
+    @Column(nullable = false, length = 64)
     private String fileName;
 
-    public String getFIleX512URL(){
-        return String.format("/head512/%s",fileName);
+    public String getFIleX512URL() {
+        return String.format("/head512/%s", fileName);
     }
-    public String getFIleX256URL(){
-        return String.format("/head256/%s",fileName);
+
+    public String getFIleX256URL() {
+        return String.format("/head256/%s", fileName);
     }
-    public String getFIleX128URL(){
-        return String.format("/head128/%s",fileName);
+
+    public String getFIleX128URL() {
+        return String.format("/head128/%s", fileName);
     }
-    public String getFIleX64URL(){
-        return String.format("/head64/%s",fileName);
+
+    public String getFIleX64URL() {
+        return String.format("/head64/%s", fileName);
     }
 
 
