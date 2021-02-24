@@ -100,10 +100,10 @@
   * 参数列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
       | :--: | :--: | :--: | :--: | :--: |
-      | POST | path={*targetFileTochangeStatus*} | 要改变状态的文件夹或者文件<br>**不会影响子文件夹和文件的状态** | USER |
+      | POST | path={*targetFileTochangeStatus*} | path->要改变状态的文件夹或者文件 | 改变给定文件夹或者文件隐藏状态<br>**不会影响子文件夹和文件的状态** | USER |
 * ```/restore-file```
   * 恢复浅层删除的文件或者文件夹
   * 参数列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 |
       | :--: | :--: | :--: | :--: | :--: |
-      | POST | path={*targetFileTochangeStatus*} | 要恢复的文件夹或者文件<br>**不会恢复子文件夹和文件的状态** | USER |
+      | POST | path={*targetFileTochangeStatus*} | path->要恢复的文件夹或者文件 | 试图恢复浅删除的文件，未被删除无操作<br>**不会恢复子文件夹和文件** | USER |
