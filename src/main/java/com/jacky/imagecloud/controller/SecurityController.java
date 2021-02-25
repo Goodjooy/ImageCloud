@@ -92,27 +92,8 @@ public class SecurityController {
         if (name.length() > 16 || name.length() == 0)
             return new Result<>("user `name` length out of size [1,16]");
         try {
-            Item rootItem = Item.RootItem();
-            User user = new User();
-            UserInformation information = new UserInformation();
-            UserImage image=new UserImage();
-
-            user.emailAddress=(emailAddress);
-            user.name=(name);
-            user.password=(encoder.encode(passWord));
-            user.image=image;
-
-            rootItem.setUser(user);
-
-            user.addItem(rootItem);
-
-            information.user = user;
-            image.setUser(user);
-
+            User user = User.newUser( name,encoder.encode(passWord),emailAddress);
             userRepository.save(user);
-            itemRepository.save(rootItem);
-            informationRepository.save(information);
-            imageRepository.save(image);
 
             logger.info(String.format("sign up new user->[email:%s][name:%s][rawPassword:%s]", emailAddress,
                     name, passWord));

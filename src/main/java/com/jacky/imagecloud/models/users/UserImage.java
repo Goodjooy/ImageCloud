@@ -22,6 +22,14 @@ public class UserImage {
     @Column(nullable = false, length = 64)
     private String fileName;
 
+    public static UserImage nullImage(User user) {
+        UserImage image = new UserImage();
+        image.user = user;
+        image.setHeaded = false;
+        image.fileName = "unknown";
+        return image;
+    }
+
     public String getFIleX512URL() {
         return String.format("/head512/%s", fileName);
     }

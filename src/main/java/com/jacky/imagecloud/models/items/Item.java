@@ -21,10 +21,10 @@ public class Item {
     private Integer id;
 
     @JsonIgnore
-    public Boolean isRemoved;
+    public Boolean removed;
 
     @Column(name = "item_name", nullable = false, length = 128)
-    private String ItemName;
+    private String itemName;
 
     @Column(name = "item_type", nullable = false)
     private ItemType itemType;
@@ -42,7 +42,7 @@ public class Item {
     @Transient
     private Set<Item> SubItems;
 
-    @OneToOne(mappedBy = "item",fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "item", fetch = FetchType.LAZY)
     public FileStorage file;
 
     @Column(nullable = false)
@@ -54,42 +54,44 @@ public class Item {
     public static Item DefaultItem() {
         Item item = new Item();
         item.hidden = false;
-        item.isRemoved = false;
+        item.removed = false;
         return item;
     }
-    public static Item RootItem(){
-        Item item=DefaultItem();
-        item.itemType=ItemType.DIR;
-        item.parentID=-1;
+
+    public static Item RootItem(User user) {
+        Item item = DefaultItem();
+        item.user=user;
+        item.itemName ="root";
+        item.itemType = ItemType.DIR;
+        item.parentID = -1;
         return item;
     }
-    public static Item RootParentItem(){
-        Item item=DefaultItem();
-        item.id=-1;
+
+    public static Item RootParentItem() {
+        Item item = DefaultItem();
+        item.id = -1;
         return item;
     }
-    public static Item FileItem(User user, Item dir, String filename,boolean hidden){
-        Item item=DefaultItem();
+
+    public static Item FileItem(User user, Item dir, String filename, boolean hidden) {
+        Item item = DefaultItem();
         item.setItemName(filename);
         item.setItemType(ItemType.FILE);
         item.setUser(user);
         item.setParentItem(dir);
         item.hidden = hidden;
 
-        user.addItem(item);
         return item;
     }
 
-    public static Item DirItem(User user,Item parentDir,String dirName,boolean hidden){
+    public static Item DirItem(User user, Item parentDir, String dirName, boolean hidden) {
         Item t = Item.DefaultItem();
         t.setItemName(dirName);
         t.setUser(user);
         t.setItemType(ItemType.DIR);
-        //连接上一个
-        t.setSameParentItem(parentDir);
-        t.hidden=hidden;
+        t.setParentItem(parentDir);
+        t.hidden = hidden;
 
-        user.addItem(t);
         return t;
     }
 
@@ -100,7 +102,9 @@ public class Item {
                 SubItems) {
             switch (item.itemType) {
                 case DIR: {
+                    items.add(item);
                     items.addAll(item.transformSubItemsToList());
+
                     break;
                 }
                 case FILE: {
@@ -119,7 +123,7 @@ public class Item {
         Item temp = this;
         for (String p :
                 pathGroup) {
-            temp = temp.findTargetItem( p, withHidden);
+            temp = temp.findTargetItem(p, withHidden);
             if (temp == null) {
                 throw new FileNotFoundException(String.format("path: `%s` not exist", path));
             }
@@ -144,12 +148,12 @@ public class Item {
     public Item findTargetItem(String path, boolean withHidden) {
         Item targetItem = null;
 
-        if (ItemName.equals(path))
+        if (itemName.equals(path))
             targetItem = this;
 
         for (Item subItem :
                 SubItems) {
-            if (subItem.ItemName.equals(path)) {
+            if (subItem.itemName.equals(path)) {
                 targetItem = subItem;
                 break;
             }
@@ -160,31 +164,25 @@ public class Item {
 
         return targetItem;
     }
-    public void getAllSUbItemFromSet(Set<Item> items, boolean withHidden, boolean withRemoved) {
-        var result = items.stream().filter(item -> {
-            if(item.id.equals(id) &&item.itemType==ItemType.FILE)
-                return false;
-            if (!withHidden && item.hidden)
-                return false;
-            if (!withRemoved && item.isRemoved)
-                return false;
-            return item.getParentID().equals(id);
-        });
-        this.SubItems= result.collect(Collectors.toSet());
+
+    public void getAllSUbItemFromSet(Set<Item> filteredItems) {
+        var result = filteredItems.stream().filter(item -> item.getParentID()==(id));
+        this.SubItems = result.collect(Collectors.toSet());
     }
 
-    public void generateSubStruct(Set<Item> items, boolean withHidden, boolean withRemoved) {
-        getAllSUbItemFromSet(items, withHidden, withRemoved);
+    public void generateSubStruct(Set<Item> items) {
+        getAllSUbItemFromSet(items);
         for (Item item : SubItems) {
-            item.generateSubStruct(items, withHidden, withRemoved);
+            item.generateSubStruct(items);
         }
     }
 
-    public void setParentItem(Item item){
-        parentID= item.getId();
+    public void setParentItem(Item item) {
+        parentID = item.getId();
     }
-    public void setSameParentItem(Item sameParentItem){
-        parentID=sameParentItem.getParentID();
+
+    public void setSameParentItem(Item sameParentItem) {
+        parentID = sameParentItem.getParentID();
     }
 
     public Set<Item> getSubItems() {
@@ -204,11 +202,11 @@ public class Item {
     }
 
     public String getItemName() {
-        return ItemName;
+        return itemName;
     }
 
     public void setItemName(String itemName) {
-        this.ItemName = itemName;
+        this.itemName = itemName;
     }
 
     public ItemType getItemType() {
@@ -227,8 +225,18 @@ public class Item {
         this.user = user;
     }
 
-    public Integer getParentID() {
-        return parentID;
+    public int getParentID() {
+        return parentID==null?-2: parentID;
     }
 
+    @Override
+    public String toString() {
+        return "Item{" +
+                "removed=" + removed +
+                ", itemName='" + itemName + '\'' +
+                ", itemType=" + itemType +
+                ", parentID=" + parentID +
+                ", hidden=" + hidden +
+                '}';
+    }
 }

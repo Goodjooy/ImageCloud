@@ -53,18 +53,7 @@ public class UserFileController {
     FileSystemStorageService fileUploader;
     PasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    @GetMapping(path = "/walk")
-    public Result<User> getUserInfo(Authentication authentication) {
-        try {
-            User user = getAndInitUser(authentication,true,false);
 
-            logger.info(String.format("load full User Info<%s|%s> success", user.emailAddress, user.name));
-            return new Result<>(user);
-        } catch (Exception e) {
-            logger.error(String.format("load User<%s> failure", authentication.getName()), e);
-            return new Result<>(e.getMessage());
-        }
-    }
 
     @GetMapping(path = "/file")
     public Result<Item> getFile(Authentication authentication,
@@ -236,7 +225,7 @@ public class UserFileController {
             user.constructItem(true, true);
             var target = user.rootItem.getTargetItem(targetPath, true);
 
-            target.isRemoved = false;
+            target.removed = false;
             userRepository.save(user);
             itemRepository.save(target);
 
@@ -321,7 +310,7 @@ public class UserFileController {
             }
             user.seizedFiles.remove(item);
         }
-        item.isRemoved = true;
+        item.removed = true;
         itemRepository.save(item);
         logger.info(String.format("Remove file success<%s> [totally]", item.getItemName()));
     }
