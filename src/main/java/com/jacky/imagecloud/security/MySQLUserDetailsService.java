@@ -7,15 +7,11 @@ import org.springframework.data.domain.Example;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import javax.naming.AuthenticationNotSupportedException;
 
 
 public class MySQLUserDetailsService implements UserDetailsService {
     UserRepository userRepository;
-    private Logger logger;
+    private final Logger logger;
 
     public MySQLUserDetailsService(UserRepository userRepository, Logger logger){
         this.userRepository=userRepository;
@@ -39,11 +35,11 @@ public class MySQLUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String emailAddress) throws UsernameNotFoundException {
         var builder = org.springframework.security.core.userdetails.User.withUsername(emailAddress);
         User user = new User();
-        user.setEmailAddress(emailAddress);
+        user.emailAddress=(emailAddress);
         var result = userRepository.findAll(Example.of(user));
         if (result.size()>=1) {
             var u = result.get(0);
-            builder.password(u.getPasswordHash());
+            builder.password(u.password);
             builder.roles("USER");
 
             logger.info(String.format("find user<%s> in database",emailAddress));

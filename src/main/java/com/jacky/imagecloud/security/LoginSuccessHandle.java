@@ -1,6 +1,5 @@
 package com.jacky.imagecloud.security;
 
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
 import org.slf4j.Logger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -32,7 +31,7 @@ public class LoginSuccessHandle implements AuthenticationSuccessHandler {
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain chain,
-            Authentication authentication) throws IOException, ServletException {
+            Authentication authentication) throws IOException {
         onAuthenticationSuccess(request, response, authentication);
     }
 
@@ -47,7 +46,7 @@ public class LoginSuccessHandle implements AuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication
-    ) throws IOException, ServletException {
+    ) throws IOException {
         //身份验证成功后行为
         logger.info(String.format("user[%s] authentication successful",authentication.getName()));
 

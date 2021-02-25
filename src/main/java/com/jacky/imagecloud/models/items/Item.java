@@ -7,9 +7,9 @@ import com.sun.istack.NotNull;
 
 import javax.persistence.*;
 import java.io.FileNotFoundException;
-import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "items")
@@ -63,15 +63,44 @@ public class Item {
         item.parentID=-1;
         return item;
     }
+    public static Item RootParentItem(){
+        Item item=DefaultItem();
+        item.id=-1;
+        return item;
+    }
+    public static Item FileItem(User user, Item dir, String filename,boolean hidden){
+        Item item=DefaultItem();
+        item.setItemName(filename);
+        item.setItemType(ItemType.FILE);
+        item.setUser(user);
+        item.setParentItem(dir);
+        item.hidden = hidden;
+
+        user.addItem(item);
+        return item;
+    }
+
+    public static Item DirItem(User user,Item parentDir,String dirName,boolean hidden){
+        Item t = Item.DefaultItem();
+        t.setItemName(dirName);
+        t.setUser(user);
+        t.setItemType(ItemType.DIR);
+        //连接上一个
+        t.setSameParentItem(parentDir);
+        t.hidden=hidden;
+
+        user.addItem(t);
+        return t;
+    }
 
     @JsonIgnore
-    public LinkedList<Item> getAllSubItem() {
+    public LinkedList<Item> transformSubItemsToList() {
         var items = new LinkedList<Item>();
         for (Item item :
                 SubItems) {
             switch (item.itemType) {
                 case DIR: {
-                    items.addAll(item.getAllSubItem());
+                    items.addAll(item.transformSubItemsToList());
                     break;
                 }
                 case FILE: {
@@ -83,7 +112,7 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item GetTargetItem(@NotNull String path, boolean withHidden) throws FileNotFoundException, RootPathNotExistException {
+    public Item getTargetItem(@NotNull String path, boolean withHidden) throws FileNotFoundException, RootPathNotExistException {
 
         var pathGroup = splitPath(path);
 
@@ -131,6 +160,26 @@ public class Item {
 
         return targetItem;
     }
+    public void getAllSUbItemFromSet(Set<Item> items, boolean withHidden, boolean withRemoved) {
+        var result = items.stream().filter(item -> {
+            if(item.id.equals(id) &&item.itemType==ItemType.FILE)
+                return false;
+            if (!withHidden && item.hidden)
+                return false;
+            if (!withRemoved && item.isRemoved)
+                return false;
+            return item.getParentID().equals(id);
+        });
+        this.SubItems= result.collect(Collectors.toSet());
+    }
+
+    public void generateSubStruct(Set<Item> items, boolean withHidden, boolean withRemoved) {
+        getAllSUbItemFromSet(items, withHidden, withRemoved);
+        for (Item item : SubItems) {
+            item.generateSubStruct(items, withHidden, withRemoved);
+        }
+    }
+
     public void setParentItem(Item item){
         parentID= item.getId();
     }

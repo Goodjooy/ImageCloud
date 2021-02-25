@@ -14,7 +14,6 @@ import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -57,9 +56,9 @@ public class UserFileController {
     @GetMapping(path = "/walk")
     public Result<User> getUserInfo(Authentication authentication) {
         try {
-            User user = getAndInitUser(authentication);
+            User user = getAndInitUser(authentication,true,false);
 
-            logger.info(String.format("load full User Info<%s|%s> success", user.getEmailAddress(), user.getName()));
+            logger.info(String.format("load full User Info<%s|%s> success", user.emailAddress, user.name));
             return new Result<>(user);
         } catch (Exception e) {
             logger.error(String.format("load User<%s> failure", authentication.getName()), e);
@@ -72,10 +71,10 @@ public class UserFileController {
                                 @RequestParam(name = "path", defaultValue = "root") String path,
                                 @RequestParam(name = "withHidden", defaultValue = "false") boolean withHidden) {
         try {
-            var user = getAndInitUser(authentication, withHidden);
-            var item = user.getRootItem().GetTargetItem(path, withHidden);
+            var user = getAndInitUser(authentication, withHidden,false);
+            var item = user.rootItem.getTargetItem(path, withHidden);
 
-            logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.getEmailAddress(), user.getName(), path));
+            logger.info(String.format("load item of User<%s|%s> in path<%s> success", user.emailAddress, user.name, path));
             return new Result<>(item);
         } catch (Exception e) {
             logger.error(String.format("load item of User<%s> in path<%s> failure", authentication.getName(), path), e);
@@ -96,22 +95,13 @@ public class UserFileController {
                     String.format("user space<%d|%d> not enough",
                             user.information.availableSize(), file.getSize()));
             if (file.isEmpty()) return new Result<>("empty file");
-
             Item last = appendNotExistItems(user, path, hidden);
-
-            var lastItem = Item.DefaultItem();
-            lastItem.setItemName(file.getOriginalFilename());
-            lastItem.setItemType(ItemType.FILE);
-            lastItem.setUser(user);
-            lastItem.setParentItem(last);
-            lastItem.hidden = hidden;
-
+            var lastItem = Item.FileItem(user,last,file.getOriginalFilename(),hidden);
             var fileStorage = fileUploader.storage(file);
             fileStorage.item = lastItem;
             lastItem.file = fileStorage;
 
             user.addItem(lastItem);
-
             user.information.AppendSize(file.getSize());
 
             fileStorageRepository.save(fileStorage);
@@ -119,7 +109,7 @@ public class UserFileController {
             userRepository.save(user);
 
             logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> success",
-                    user.getEmailAddress(), user.getName(), path, file.getOriginalFilename()));
+                    user.emailAddress, user.name, path, file.getOriginalFilename()));
             return new Result<>(true);
         } catch (Exception e) {
             logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure",
@@ -141,46 +131,23 @@ public class UserFileController {
         try {
             User user = getAndInitUser(authentication, false);
 
-            if (!encoder.matches(password, user.getPasswordHash())) return new Result<>("wrong password!");
+            if (!encoder.matches(password, user.password)) return new Result<>("wrong password!");
             if (path.equals("/root")) return new Result<>("can not remove /root dir");
 
-            var rootItem = user.getRootItem();
+            var rootItem = user.rootItem;
 
-            var target = rootItem.GetTargetItem(path, true);
+            var target = rootItem.getTargetItem(path, true);
+            var subItems = target.transformSubItemsToList();
+
+            subItemDeleter(subItems, flatRemove);
 
             switch (target.getItemType()) {
                 case FILE: {
-                    //删除文件
-                    if (!flatRemove) {
-                        var size = fileUploader.delete(target.file.filePath);
-                        user.information.AppendSize(-size);
-                    }
                     deleteItem(target, flatRemove);
-
                     userRepository.save(user);
                     break;
                 }
                 case DIR: {
-                    //删除子文件
-                    var allItems = target.getAllSubItem();
-                    for (Item item :
-                            allItems) {
-                        switch (item.getItemType()) {
-                            case FILE: {
-                                //删除文件
-                                if (!flatRemove) {
-                                    var size = item.file == null ? 0 : fileUploader.delete(item.file.filePath);
-                                    user.information.AppendSize(-size);
-                                }
-                                deleteItem(item, flatRemove);
-                                break;
-                            }
-                            case DIR: {
-                                deleteItem(item, flatRemove);
-                                break;
-                            }
-                        }
-                    }
                     if (removeTargetDir)
                         deleteItem(target, flatRemove);
                     userRepository.save(user);
@@ -190,7 +157,7 @@ public class UserFileController {
                     throw new UnknownItemTypeException("unknown item type");
             }
             logger.info(String.format("remove item of User<%s|%s> under path<%s> success",
-                    user.getEmailAddress(), user.getName(), path));
+                    user.emailAddress, user.name, path));
             return new Result<>(true);
 
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | UnknownItemTypeException e) {
@@ -211,7 +178,7 @@ public class UserFileController {
 
             appendNotExistItems(user, path, hidden);
             userRepository.save(user);
-            logger.info(String.format("User<%s|%s> Create path %s Success!", user.getName(), user.getEmailAddress(), path));
+            logger.info(String.format("User<%s|%s> Create path %s Success!", user.name, user.emailAddress, path));
             return new Result<>(true);
         } catch (UserNotFoundException | RootPathNotExistException e) {
             logger.error(String.format("User<%s> create dir %s failure", authentication.getName(), path), e);
@@ -243,14 +210,14 @@ public class UserFileController {
     ) {
         try {
             var user = getAndInitUser(authentication, true);
-            var target = user.getRootItem().GetTargetItem(targetPath, true);
+            var target = user.rootItem.getTargetItem(targetPath, true);
             target.hidden = !target.hidden;
 
             userRepository.save(user);
             itemRepository.save(target);
 
             logger.info(String.format("change file status in path<%s> for User<%s|%s> success[->%s]",
-                    targetPath, user.getEmailAddress(), user.getName(), target.hidden));
+                    targetPath, user.emailAddress, user.name, target.hidden));
             return new Result<>(target.hidden);
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
             logger.error(String.format("change file status in path<%s> for User<%s> failure",
@@ -267,13 +234,13 @@ public class UserFileController {
         try {
             var user = getAndInitUser(authentication);
             user.constructItem(true, true);
-            var target = user.getRootItem().GetTargetItem(targetPath, true);
+            var target = user.rootItem.getTargetItem(targetPath, true);
 
             target.isRemoved = false;
             userRepository.save(user);
             itemRepository.save(target);
 
-            logger.info(String.format("restore file <%s> for user<%s> success", targetPath, user.getEmailAddress()));
+            logger.info(String.format("restore file <%s> for user<%s> success", targetPath, user.emailAddress));
             return new Result<>(Boolean.TRUE);
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
             logger.info(String.format("restore file <%s> for user<%s> failure", targetPath, authentication.getName()), e);
@@ -299,50 +266,36 @@ public class UserFileController {
         logger.info(String.format("Exception remove file %d", sum));
     }
 
+    private User getAndInitUser(Authentication authentication, boolean withRemove) throws UserNotFoundException {
+        return getAndInitUser(authentication, false, withRemove);
+    }
 
     private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
-        return getAndInitUser(authentication, false);
+        return getAndInitUser(authentication, false, false);
     }
 
-    private User getAndInitUser(Authentication authentication, boolean withHidden) throws UserNotFoundException {
-        String emailAddress = authentication.getName();
-        User user = new User();
-        user.setEmailAddress(emailAddress);
+    private User getAndInitUser(Authentication authentication, boolean withHidden, boolean withRemoved) throws UserNotFoundException {
+        User user = User.databaseUser(userRepository, authentication, withHidden, withRemoved);
 
-        //var itemResult = new Item();
-
-        var result = userRepository.findOne(Example.of(user));
-
-        if (result.isPresent()) {
-            user = result.get();
-            user.constructItem(withHidden);
-
-            logger.info(String.format("organization User<%s|%s> data struct success!", user.getEmailAddress(), user.getName()));
-            return user;
-        }
-        throw new UserNotFoundException(String.format("User<%s> not found", authentication.getName()));
+        logger.info(String.format("organization User<%s|%s> data struct success!", user.emailAddress, user.name));
+        return user;
 
     }
 
-    private LinkedList<Item> GetItemTree(String path, Item root, boolean withHidden) throws RootPathNotExistException {
+    private LinkedList<Item> GetItemTree(String path, Item root, boolean hidden) throws RootPathNotExistException {
         var items = new LinkedList<Item>();
+        var user=root.getUser();
         var groups = root.splitPath(path);
 
         Item temp = root;
         for (String p :
                 groups) {
-            var t = temp.findTargetItem(p, withHidden);
+            var t = temp.findTargetItem(p, false);
             if (t != null) {
                 items.add(t);
                 temp = t;
             } else {
-                t = Item.DefaultItem();
-                t.setItemName(p);
-                t.setUser(root.getUser());
-                t.setItemType(ItemType.DIR);
-                //连接上一个
-                t.setSameParentItem(items.getLast());
-
+                t = Item.DirItem(user,items.getLast(),p,hidden);
                 items.add(t);
             }
         }
@@ -350,13 +303,23 @@ public class UserFileController {
 
     }
 
+    private void subItemDeleter(List<Item> items, boolean flatRemove) {
+        for (Item item : items) {
+            deleteItem(item,flatRemove);
+        }
+    }
+
     private void deleteItem(Item item, boolean flatRemove) {
+        var user = item.getUser();
+        if (item.getItemType() == ItemType.FILE && !flatRemove) {
+            var size = item.file == null ? 0 : fileUploader.delete(item.file.filePath);
+            user.information.AppendSize(-size);
+        }
         if (!flatRemove) {
             if (item.getItemType() == ItemType.FILE && item.file != null) {
                 fileStorageRepository.deleteById(item.file.id);
             }
-            var user = item.getUser();
-            user.getAllItems().remove(item);
+            user.seizedFiles.remove(item);
         }
         item.isRemoved = true;
         itemRepository.save(item);
@@ -364,11 +327,11 @@ public class UserFileController {
     }
 
     private Item appendNotExistItems(User user, String path, boolean hidden) throws RootPathNotExistException {
-        var items = GetItemTree(path, user.getRootItem(), hidden);
+        var items = GetItemTree(path, user.rootItem, hidden);
         Item lastItem = Item.DefaultItem();
         for (Item item :
                 items) {
-            if (!user.getAllItems().contains(item)) {
+            if (!user.seizedFiles.contains(item)) {
                 item.setParentItem(lastItem);
                 user.addItem(item);
                 itemRepository.save(item);
@@ -377,6 +340,4 @@ public class UserFileController {
         }
         return lastItem;
     }
-
-
 }

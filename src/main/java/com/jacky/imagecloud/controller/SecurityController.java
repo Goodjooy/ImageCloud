@@ -66,7 +66,7 @@ public class SecurityController {
             return new Result<>("bad email address");
         }
         User user = new User();
-        user.setEmailAddress(emailAddress);
+        user.emailAddress=(emailAddress);
         var result = userRepository.findAll(Example.of(user));
         if (result.isEmpty()) {
             logger.info(String.format("Check email: Email<%s> is available", emailAddress));
@@ -97,10 +97,9 @@ public class SecurityController {
             UserInformation information = new UserInformation();
             UserImage image=new UserImage();
 
-            user.setEmailAddress(emailAddress);
-            user.setName(name);
-            user.setPassword(encoder.encode(passWord));
-            user.setRootItem(rootItem);
+            user.emailAddress=(emailAddress);
+            user.name=(name);
+            user.password=(encoder.encode(passWord));
             user.image=image;
 
             rootItem.setUser(user);
@@ -137,21 +136,21 @@ public class SecurityController {
         try {
             //check user
             User user = new User();
-            user.setEmailAddress(authentication.getName());
+            user.emailAddress=(authentication.getName());
 
             var result = userRepository.findOne(Example.of(user));
             if (result.isPresent()) {
                 user = result.get();
 
-                if (encoder.matches(oldPassword, user.getPasswordHash()) && !oldPassword.equals(newPassword)) {
-                    user.setPassword(encoder.encode(newPassword));
+                if (encoder.matches(oldPassword, user.password) && !oldPassword.equals(newPassword)) {
+                    user.password=(encoder.encode(newPassword));
                     userRepository.save(user);
-                    logger.info(String.format("User<%s> change password success,new password<%s> ,auto logout", user.getName(), newPassword));
+                    logger.info(String.format("User<%s> change password success,new password<%s> ,auto logout", user.name, newPassword));
                     new SecurityContextLogoutHandler().logout(request, response, authentication);
                     return new Result<>(Boolean.TRUE);
                 }
-                logger.info(String.format("User<%s> change password failure,wrong old password or same new password and old password", user.getName()));
-                return new Result<>(String.format("User<%s> change password failure,wrong old password or same new password and old password", user.getName()));
+                logger.info(String.format("User<%s> change password failure,wrong old password or same new password and old password", user.name));
+                return new Result<>(String.format("User<%s> change password failure,wrong old password or same new password and old password", user.name));
             }
             throw new UserNotFoundException(String.format("User<%s> not found", authentication.getName()));
         } catch (Exception e) {

@@ -18,10 +18,18 @@ public class UserInformation {
 
 
     @Column(nullable = false)
-    public Long totalSize = 5368709120L;
+    public Long totalSize;
 
     @Column(nullable = false)
     public Long usedSize = 0L;
+
+    public static UserInformation defaultUserInformation(){
+        UserInformation information=new UserInformation();
+        information.totalSize=5368709120L;
+        information.usedSize=0L;
+
+        return information;
+    }
 
     public Long availableSize() {
         return totalSize - usedSize;
