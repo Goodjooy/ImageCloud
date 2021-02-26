@@ -47,7 +47,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
-                .antMatchers("/sign-up","/check-email","/sharePort").permitAll()
+                .antMatchers("/sign-up","/check-email","/sharePort","/verify-email-page","/verify-email").permitAll()
                 .antMatchers("/file", "/upload", "/walk","/dir").hasAnyRole("USER", "ADMIN")
                 .antMatchers("/unchecked/**","/admin/**").hasAnyRole("ADMIN")
 

@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,6 +55,12 @@ public class SecurityController {
     @GetMapping("/reset-paswd")
     public String resetPassword() {
         return "reset-paswd";
+    }
+
+    @GetMapping("/verify-email-page")
+    public String getVerifyPage(Model model,@RequestParam(name = "email")String emailAddress){
+        model.addAttribute("email",emailAddress);
+        return "verify-email";
     }
 
     @PostMapping("/check-email")
@@ -104,6 +111,25 @@ public class SecurityController {
             return new Result<>(e.getMessage());
         }
     }
+
+    @PostMapping(path = "/verify-email")
+    public String verifyEmail(
+            @RequestParam(name = "uid")String emailAddress,
+            @RequestParam(name = "paswd")String password,
+            Model model
+    ){
+        User user=User.authUser(emailAddress);
+        var users=userRepository.findAll(Example.of(user));
+        var result=users.stream().filter(user1 -> encoder.matches(password,user1.password));
+        model.addAttribute("user",user);
+        if(result.toArray().length==1){
+            model.addAttribute("status",true);
+        }else {
+            model.addAttribute("status",false);
+        }
+        return "verify-done";
+    }
+
 
     @PostMapping(value = "/reset-paswd")
     @ResponseBody

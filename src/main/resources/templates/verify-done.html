@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>验证邮箱结果</title>
+</head>
+<body>
+<p th:if="${status}">验证邮箱成功</p>
+<p th:if="${not status}">验证邮箱失败</p>
+</body>
+</html>
