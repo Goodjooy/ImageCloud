@@ -9,11 +9,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.jacky.imagecloud.err.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.StorageException;
 import com.jacky.imagecloud.err.StorageFileNotFoundException;
 import com.jacky.imagecloud.models.items.FileStorage;
@@ -66,6 +68,9 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     public void SaveImageWithThumbnail(InputStream inputStream,
                                        @NotNull String fileName,
                                        @NotNull String fileExtra) throws IOException {
+        if (List.of(ImageIO.getReaderFormatNames()).contains(fileExtra.toLowerCase()))
+            throw new FileFormatNotSupportException(String.format("file format name<%s> not support",fileExtra));
+
         var copyStream=copyStream(inputStream);
         var RawImage = ImageIO.read(new ByteArrayInputStream(copyStream.toByteArray()));
         int width = RawImage.getWidth();

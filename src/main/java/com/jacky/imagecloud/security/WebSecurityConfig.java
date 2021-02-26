@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -71,6 +72,20 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .clearAuthentication(true)
                 .invalidateHttpSession(true)
                 .logoutSuccessHandler(new LogOutSuccessHandle(logger))
+
+                .and()
+                .sessionManagement()
+                .invalidSessionStrategy((request, response) -> {
+                    response.setHeader(HttpHeaders.CONTENT_TYPE,"application/json");
+                    response.getWriter().print(
+                            "{" +
+                                    "\"data\":null," +
+                                    "\"err\":true," +
+                                    "\"invalidSession\":true," +
+                                    "\"message\":\"detect invalid session\"" +
+                                    "}"
+                    );
+                })
 
                 .and() //;
                 .csrf().disable()
