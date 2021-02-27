@@ -48,7 +48,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
-                .antMatchers("/sign-up","/check-email","/sharePort","/verify-email-page","/verify-email").permitAll()
+                .antMatchers("/sign-up","/check-email","/sharePort","/verify-email-page","/verify-email",
+                        "/session-status").permitAll()
                 .antMatchers("/file", "/upload", "/walk","/dir").hasAnyRole("USER", "ADMIN")
                 .antMatchers("/unchecked/**","/admin/**").hasAnyRole("ADMIN")
 
@@ -75,17 +76,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
                 .and()
                 .sessionManagement()
-                .invalidSessionStrategy((request, response) -> {
-                    response.setHeader(HttpHeaders.CONTENT_TYPE,"application/json");
-                    response.getWriter().print(
-                            "{" +
-                                    "\"data\":null," +
-                                    "\"err\":true," +
-                                    "\"invalidSession\":true," +
-                                    "\"message\":\"detect invalid session\"" +
-                                    "}"
-                    );
-                })
+
 
                 .and() //;
                 .csrf().disable()

@@ -2,8 +2,11 @@ package com.jacky.imagecloud.controller;
 
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.UserNotFoundException;
-import com.jacky.imagecloud.models.items.*;
-import com.jacky.imagecloud.models.users.*;
+import com.jacky.imagecloud.models.items.ItemRepository;
+import com.jacky.imagecloud.models.users.User;
+import com.jacky.imagecloud.models.users.UserImageRepository;
+import com.jacky.imagecloud.models.users.UserInformationRepository;
+import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +24,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -58,9 +60,18 @@ public class SecurityController {
     }
 
     @GetMapping("/verify-email-page")
-    public String getVerifyPage(Model model,@RequestParam(name = "email")String emailAddress){
-        model.addAttribute("email",emailAddress);
+    public String getVerifyPage(Model model, @RequestParam(name = "email") String emailAddress) {
+        model.addAttribute("email", emailAddress);
         return "verify-email";
+    }
+
+    @GetMapping("/session-status")
+    @ResponseBody
+    public Result<Boolean> SessionStatus(Authentication authentication) {
+        if (authentication==null)
+        return new Result<>(false);
+        else
+            return new Result<>(authentication.isAuthenticated());
     }
 
     @PostMapping("/check-email")
@@ -73,14 +84,14 @@ public class SecurityController {
             return new Result<>("bad email address");
         }
         User user = new User();
-        user.emailAddress=(emailAddress);
+        user.emailAddress = (emailAddress);
         var result = userRepository.findAll(Example.of(user));
         if (result.isEmpty()) {
             logger.info(String.format("Check email: Email<%s> is available", emailAddress));
             return new Result<>(true);
         }
         logger.info(String.format("Check email: Email<%s> was exists", emailAddress));
-        return new Result<>(false,false,"email is exist");
+        return new Result<>(false, false, "email is exist");
     }
 
     @PostMapping(path = "/sign-up")
@@ -99,7 +110,7 @@ public class SecurityController {
         if (name.length() > 16 || name.length() == 0)
             return new Result<>("user `name` length out of size [1,16]");
         try {
-            User user = User.newUser( name,encoder.encode(passWord),emailAddress);
+            User user = User.newUser(name, encoder.encode(passWord), emailAddress);
             userRepository.save(user);
 
             logger.info(String.format("sign up new user->[email:%s][name:%s][rawPassword:%s]", emailAddress,
@@ -114,18 +125,18 @@ public class SecurityController {
 
     @PostMapping(path = "/verify-email")
     public String verifyEmail(
-            @RequestParam(name = "uid")String emailAddress,
-            @RequestParam(name = "paswd")String password,
+            @RequestParam(name = "uid") String emailAddress,
+            @RequestParam(name = "paswd") String password,
             Model model
-    ){
-        User user=User.authUser(emailAddress);
-        var users=userRepository.findAll(Example.of(user));
-        var result=users.stream().filter(user1 -> encoder.matches(password,user1.password));
-        model.addAttribute("user",user);
-        if(result.toArray().length==1){
-            model.addAttribute("status",true);
-        }else {
-            model.addAttribute("status",false);
+    ) {
+        User user = User.authUser(emailAddress);
+        var users = userRepository.findAll(Example.of(user));
+        var result = users.stream().filter(user1 -> encoder.matches(password, user1.password));
+        model.addAttribute("user", user);
+        if (result.toArray().length == 1) {
+            model.addAttribute("status", true);
+        } else {
+            model.addAttribute("status", false);
         }
         return "verify-done";
     }
@@ -143,14 +154,14 @@ public class SecurityController {
         try {
             //check user
             User user = new User();
-            user.emailAddress=(authentication.getName());
+            user.emailAddress = (authentication.getName());
 
             var result = userRepository.findOne(Example.of(user));
             if (result.isPresent()) {
                 user = result.get();
 
                 if (encoder.matches(oldPassword, user.password) && !oldPassword.equals(newPassword)) {
-                    user.password=(encoder.encode(newPassword));
+                    user.password = (encoder.encode(newPassword));
                     userRepository.save(user);
                     logger.info(String.format("User<%s> change password success,new password<%s> ,auto logout", user.name, newPassword));
                     new SecurityContextLogoutHandler().logout(request, response, authentication);
