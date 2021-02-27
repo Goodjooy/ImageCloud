@@ -53,6 +53,19 @@
       | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
       | GET | null |null| 獲得簡單的文件上傳界面 | USER | ```html``` |
+* ```/headup```
+  * 只供測試使用的用户头像上傳接口
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
+      | :--: | :--: | :--: | :--: | :--: | :------: |  
+      | GET | null |null| 获得简单的用户头像上传界面 | USER | ```html``` |
+* ```/headImagePreview```
+  * 只供測試使用的用户头像预览接口
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
+      | :--: | :--: | :--: | :--: | :--: | :------: |  
+      | GET | null |null| 获得简单的用户头像预览界面 | USER | ```html``` |
+
 * ```/imgPreview/{filename:.+}```
   * 只供測試使用的圖片預覽接口
   * 參數列表
@@ -79,7 +92,7 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
-      | GET | path={*targetPath*}&<br>withHidden={*ignoreHiddenItems*:**false**} | path->要獲取的文件夾或者文件信息的路徑;<br>withHidden(boolean)->是否忽略隐藏文件 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭* | USER | ```Result<Item>``` |
+      | GET | path={*targetPath*}&<br>withHidden={*withHiddenItems*:**false**} | path->要獲取的文件夾或者文件信息的路徑;<br>withHidden(boolean)->是否忽略隐藏文件 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭* | USER | ```Result<Item>``` |
       | POST | path={*fileUploadDirPath*}&<br>file={*fileToUpload*}&<br>hidden={*createHiddenFiles*:**false**} | path->文件上傳的位置（不包含文件名）;<br>file->要上傳的文件;<br>hidden(bool)->是否创建隐藏文件 | 將文件上傳到指定位置<br>*路徑以```/root```開頭*<br>*如果路徑不存在，將會自動創建文件夾* | USER | ```Result<Boolean>```|
       | DELETE | path={*targetPathToRemove*}&<br>paswd={*userPassword*}&<br>flat={*removeFlatly*:**true**}&<br>removeTargetDir={*removeTargetDir*:**false**} | path->要刪除的文件夾或文件;<br>paswd->用戶密碼;<br>flat(bool)->是否为浅层删除；<br>removeTargetDir(bool)->是否删除指定的文件夹 | 將指定位置文件或文件夾刪除<br>*路徑以```/root```開頭*<br>*浅层删除不会删除服务器文件，未来可能提供接口供恢复* | USER |```Result<Boolean>```|
 
@@ -139,7 +152,13 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :-----: | :-----: | :--: | :-----: | :------: |
-      | GET | \[路径参数]size<br>\[路径参数]filename | size->要获取的头像大小；<br>filename->头像的实际文件名 | 获取用户头像信息<br>*头像大小只支持以下范围{512，256，128，64，32，16}* | USER |```Result<UserImage>``` |
+      | GET | \[路径参数]size<br>\[路径参数]filename | size->要获取的头像大小；<br>filename->头像的实际文件名 | 获取用户头像信息<br>*头像大小只支持以下范围<br>{512，256，128，64，32，16}* | USER |```Result<UserImage>``` |
+* ```/head```
+  * 获取基本的用户信息
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
+      | :--: | :-----: | :-----: | :--: | :-----: | :------: |
+      | POST | file={*UserHeadImageToUpload*} | file->要上传的用户头像 | 上传用户头像<br>*如果图片不是正方形，将选取中央最大正方形作为头像* | USER |```Result<Boolean>``` |
 
 ---
 

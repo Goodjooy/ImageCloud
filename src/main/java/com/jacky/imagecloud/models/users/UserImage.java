@@ -3,6 +3,7 @@ package com.jacky.imagecloud.models.users;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import javax.persistence.*;
+import java.util.UUID;
 
 @Entity
 public class UserImage {
@@ -28,6 +29,20 @@ public class UserImage {
         image.setHeaded = false;
         image.fileName = "unknown";
         return image;
+    }
+
+    public static UserImage generateNameImage(){
+        UserImage image=new UserImage();
+        image.setHeaded=false;
+        image.fileName= UUID.randomUUID().toString()+".unknown";
+
+        return image;
+    }
+    public UserImage combineImage(UserImage image){
+        setHeaded=image.getSetHeaded();
+        fileName=image.getFileName();
+
+        return this;
     }
 
     public String getFileX512URL() {
