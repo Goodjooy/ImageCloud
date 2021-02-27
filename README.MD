@@ -226,5 +226,6 @@
   class UserInformation {
      long totalSize;
      long usedSize;
+     boolean verify;
   }
   ```
