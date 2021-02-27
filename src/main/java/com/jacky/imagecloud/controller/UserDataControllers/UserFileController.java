@@ -120,7 +120,7 @@ public class UserFileController {
     ) {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
-            User user = getAndInitUser(authentication, false);
+            User user = getAndInitUser(authentication, true,false);
 
             if (!encoder.matches(password, user.password)) return new Result<>("wrong password!");
             if (path.equals("/root")) return new Result<>("can not remove /root dir");
