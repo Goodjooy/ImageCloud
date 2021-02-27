@@ -125,7 +125,7 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
-      | GET | null | null | 获得用户删除的文件树 | USER | ```Result<Set<Item>>``` |
+      | GET | null | null | 获得用户删除的文件树 | USER | ```Result<Map<String,Item>>``` |
 
 ### **User Information ```/user```**
 
@@ -188,13 +188,11 @@
   }
 
   class Item{
-    int id;
     String itemName;
     ItemType itemType;
     Set<Item> subItems;
     FileStorage file;
     boolean hidden;
-    int parentID;
   }
   ```
 

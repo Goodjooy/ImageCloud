@@ -7,7 +7,9 @@ import org.springframework.data.domain.Example;
 import org.springframework.security.core.Authentication;
 
 import javax.persistence.*;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -35,7 +37,7 @@ public class User {
 
     @JsonIgnore
     @Transient
-    private Set<Item> flatRemovedItems;
+    private Map<String,Item> flatRemovedItems;
 
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -96,9 +98,9 @@ public class User {
     }
     @JsonIgnore
     @Transient
-    public Set<Item> removedItems(){
+    public Map<String,Item> removedItems(){
         if (flatRemovedItems==null){
-            flatRemovedItems=new HashSet<>();
+            flatRemovedItems=new HashMap<>();
                 constructItem(true,true);
             //find all removed branch
             flatRemovedItems=findAllRemovedBranch();
@@ -126,7 +128,7 @@ public class User {
         }
     }
 
-    private Set<Item>findAllRemovedBranch(){
+    private HashMap<String ,Item>findAllRemovedBranch(){
         return rootItem.findAllRemoveSubItem();
     }
 

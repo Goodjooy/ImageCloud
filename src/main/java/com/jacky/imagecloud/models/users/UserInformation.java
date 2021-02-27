@@ -23,11 +23,15 @@ public class UserInformation {
     @Column(nullable = false)
     public Long usedSize = 0L;
 
+    @Column(nullable = false)
+    public Boolean verify;
+
     public static UserInformation defaultUserInformation(User user){
         UserInformation information=new UserInformation();
         information.user=user;
         information.totalSize=5368709120L;
         information.usedSize=0L;
+        information.verify=false;
 
         return information;
     }

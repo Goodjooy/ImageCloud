@@ -7,6 +7,7 @@ import com.sun.istack.NotNull;
 
 import javax.persistence.*;
 import java.io.FileNotFoundException;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -14,7 +15,7 @@ import java.util.stream.Collectors;
 @Entity
 @Table(name = "items")
 public class Item {
-
+    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
@@ -33,6 +34,7 @@ public class Item {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonIgnore
     @Column(name = "parent")
     private Integer parentID;
 
@@ -58,8 +60,8 @@ public class Item {
 
     public static Item RootItem(User user) {
         Item item = DefaultItem();
-        item.user=user;
-        item.itemName ="root";
+        item.user = user;
+        item.itemName = "root";
         item.itemType = ItemType.DIR;
         item.parentID = -1;
         return item;
@@ -92,10 +94,18 @@ public class Item {
 
         return t;
     }
-    public Set<Item>findAllRemoveSubItem(){
-        Set<Item>result;
-        result=SubItems.stream().filter(item -> item.removed).collect(Collectors.toSet());
-        var t=SubItems.stream().filter(item -> !item.removed).map(item -> result.addAll(findAllRemoveSubItem()));
+
+    public HashMap<String, Item> findAllRemoveSubItem() {
+        HashMap<String, Item> result = new HashMap<>();
+        var items = SubItems.stream().filter(item -> item.removed
+        ).map((item) -> result.put(String.format("%s/%s",itemName,item.itemName), item)).collect(Collectors.toSet());
+        var re = SubItems.stream().filter(item -> !item.removed).map(item -> {
+            var temps = item.findAllRemoveSubItem();
+            for (String key : temps.keySet()) {
+                result.put(String.format("%s/%s", itemName, key), temps.get(key));
+            }
+            return temps.values();
+        }).collect(Collectors.toSet());
         return result;
     }
 
@@ -170,7 +180,7 @@ public class Item {
     }
 
     public void getAllSUbItemFromSet(Set<Item> filteredItems) {
-        var result = filteredItems.stream().filter(item -> item.getParentID()==(id));
+        var result = filteredItems.stream().filter(item -> item.getParentID() == (id));
         this.SubItems = result.collect(Collectors.toSet());
     }
 
@@ -230,7 +240,7 @@ public class Item {
     }
 
     public int getParentID() {
-        return parentID==null?-2: parentID;
+        return parentID == null ? -2 : parentID;
     }
 
     @Override

@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -161,7 +162,7 @@ public class UserFileController {
     }
 
     @GetMapping(path = "/remove-trees")
-    public Result<Set<Item>> getRemovedItems(Authentication authentication) {
+    public Result<Map<String ,Item>> getRemovedItems(Authentication authentication) {
         try {
             User user = User.databaseUser(userRepository, authentication);
 
@@ -216,7 +217,7 @@ public class UserFileController {
             @RequestParam(name = "path", defaultValue = "/root") String targetPath
     ) {
         try {
-            var user = getAndInitUser(authentication, true);
+            var user = getAndInitUser(authentication, true,false);
             var target = user.rootItem.getTargetItem(targetPath, true);
             target.hidden = !target.hidden;
 
