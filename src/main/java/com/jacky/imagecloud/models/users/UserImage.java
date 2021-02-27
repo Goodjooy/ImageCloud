@@ -30,28 +30,28 @@ public class UserImage {
         return image;
     }
 
-    public String getFIleX512URL() {
-        return String.format("/head512/%s", fileName);
+    public String getFileX512URL() {
+        return String.format("/user/head512/%s", fileName);
     }
 
-    public String getFIleX256URL() {
-        return String.format("/head256/%s", fileName);
+    public String getFileX256URL() {
+        return String.format("/user/head256/%s", fileName);
     }
 
-    public String getFIleX128URL() {
-        return String.format("/head128/%s", fileName);
+    public String getFileX128URL() {
+        return String.format("/user/head128/%s", fileName);
     }
 
-    public String getFIleX64URL() {
-        return String.format("/head64/%s", fileName);
+    public String getFileX64URL() {
+        return String.format("/user/head64/%s", fileName);
     }
 
-    public String getFIleX32URL() {
-        return String.format("/head32/%s", fileName);
+    public String getFileX32URL() {
+        return String.format("/user/head32/%s", fileName);
     }
 
-    public String getFIleX16URL() {
-        return String.format("/head16/%s", fileName);
+    public String getFileX16URL() {
+        return String.format("/user/head16/%s", fileName);
     }
 
 

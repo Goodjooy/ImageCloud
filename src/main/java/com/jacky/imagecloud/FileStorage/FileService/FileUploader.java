@@ -1,4 +1,4 @@
-package com.jacky.imagecloud.FileStorage;
+package com.jacky.imagecloud.FileStorage.FileService;
 
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;

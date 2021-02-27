@@ -1,4 +1,4 @@
-package com.jacky.imagecloud.FileStorage;
+package com.jacky.imagecloud.FileStorage.FileService;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.jacky.imagecloud.FileStorage.StorageProperties;
 import com.jacky.imagecloud.err.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.StorageException;
 import com.jacky.imagecloud.err.StorageFileNotFoundException;

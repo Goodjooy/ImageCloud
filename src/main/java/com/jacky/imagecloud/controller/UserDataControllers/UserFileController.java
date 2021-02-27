@@ -1,6 +1,6 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
-import com.jacky.imagecloud.FileStorage.FileSystemStorageService;
+import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
 import com.jacky.imagecloud.err.UnknownItemTypeException;

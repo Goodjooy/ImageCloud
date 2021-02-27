@@ -194,12 +194,12 @@
     class UserImage {
       boolean setHeaded;
 
-      String fIleX512URL;
-      String fIleX256URL;
-      String fIleX128URL;
-      String fIleX64URL;
-      String fIleX32URL;
-      String fIleX16URL;
+      String fileX512URL;
+      String fileX256URL;
+      String fileX128URL;
+      String fileX64URL;
+      String fileX32URL;
+      String fileX16URL;
     }
   ```
 

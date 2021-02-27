@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>imagePreview</title>
+</head>
+<body>
+<ul>
+    <li>
+        512
+        <img th:src="${i512}"/>
+    </li>
+    <li>
+        256
+        <img th:src="${i256}"/>
+    </li>
+    <li>
+        128
+        <img th:src="${i128}"/>
+    </li>
+    <li>
+        64
+        <img th:src="${i64}"/>
+    </li>
+    <li>
+        32
+        <img th:src="${i32}"/>
+    </li>
+    <li>
+        16
+        <img th:src="${i16}"/>
+    </li>
+</ul>
+</body>
+</html>
