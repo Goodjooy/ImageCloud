@@ -68,7 +68,8 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     public void SaveImageWithThumbnail(InputStream inputStream,
                                        @NotNull String fileName,
                                        @NotNull String fileExtra) throws IOException {
-        if (List.of(ImageIO.getReaderFormatNames()).contains(fileExtra.toLowerCase()))
+        var supports=List.of(ImageIO.getReaderFormatNames());
+        if (!supports.contains(fileExtra.toLowerCase()))
             throw new FileFormatNotSupportException(String.format("file format name<%s> not support",fileExtra));
 
         var copyStream=copyStream(inputStream);
