@@ -80,7 +80,7 @@ public class SecurityController {
             return new Result<>(true);
         }
         logger.info(String.format("Check email: Email<%s> was exists", emailAddress));
-        return new Result<>("email is exist");
+        return new Result<>(false,false,"email is exist");
     }
 
     @PostMapping(path = "/sign-up")

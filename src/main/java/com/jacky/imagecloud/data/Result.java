@@ -1,17 +1,18 @@
 package com.jacky.imagecloud.data;
 
-import com.zaxxer.hikari.util.SuspendResumeLock;
-
 public class Result<DATA> {
     public final DATA data;
     public final boolean err;
+    public  final boolean invalidSession;
     public final String message;
+
 
     public Result(DATA data, boolean err, String message){
 
         this.data = data;
         this.err = err;
         this.message = message;
+        invalidSession = false;
     }
     public Result(DATA data){
         this(data,false,"");
