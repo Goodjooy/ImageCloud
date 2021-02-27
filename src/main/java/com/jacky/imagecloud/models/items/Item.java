@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 @Table(name = "items")
 public class Item {
 
-    @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Integer id;
@@ -34,7 +33,6 @@ public class Item {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @JsonIgnore
     @Column(name = "parent")
     private Integer parentID;
 
@@ -93,6 +91,12 @@ public class Item {
         t.hidden = hidden;
 
         return t;
+    }
+    public Set<Item>findAllRemoveSubItem(){
+        Set<Item>result;
+        result=SubItems.stream().filter(item -> item.removed).collect(Collectors.toSet());
+        var t=SubItems.stream().filter(item -> !item.removed).map(item -> result.addAll(findAllRemoveSubItem()));
+        return result;
     }
 
     @JsonIgnore

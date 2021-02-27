@@ -34,6 +34,10 @@ public class User {
     public Item rootItem;
 
     @JsonIgnore
+    @Transient
+    private Set<Item> flatRemovedItems;
+
+    @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     public Set<Item> seizedFiles;
 
@@ -87,18 +91,20 @@ public class User {
         return user;
     }
 
-    public void constructItemWithoutRemovedFiles(boolean withHidden) {
-        rootItem = (generateItemStruct(withHidden, false));
-    }
-
-    public void constructItemWithoutHiddenFiles(boolean withRemoved) {
-        rootItem = (generateItemStruct(false, withRemoved));
-    }
-
     public void constructItem(boolean withHidden, boolean withRemoved) {
         rootItem = (generateItemStruct(withHidden, withRemoved));
     }
-
+    @JsonIgnore
+    @Transient
+    public Set<Item> removedItems(){
+        if (flatRemovedItems==null){
+            flatRemovedItems=new HashSet<>();
+                constructItem(true,true);
+            //find all removed branch
+            flatRemovedItems=findAllRemovedBranch();
+        }
+        return flatRemovedItems;
+    }
 
     private Item generateItemStruct(boolean withHidden, boolean withRemoved) {
         Item rootParent = Item.RootParentItem();
@@ -118,6 +124,10 @@ public class User {
         } else {
             return Item.RootItem(null);
         }
+    }
+
+    private Set<Item>findAllRemovedBranch(){
+        return rootItem.findAllRemoveSubItem();
     }
 
     public void addItem(Item item) {

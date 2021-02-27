@@ -154,7 +154,7 @@
   ```java
   enum ItemType {
         DIR,
-        FILE;
+        FILE
   }
 
   class FileStorage {
@@ -163,11 +163,13 @@
   }
 
   class Item{
+    int id;
     String itemName;
     ItemType itemType;
     Set<Item> subItems;
     FileStorage file;
     boolean hidden;
+    int parentID;
   }
   ```
 
@@ -184,7 +186,7 @@
 
   ```java
     class UserImage {
-      boolean setHeaded
+      boolean setHeaded;
 
       String fIleX512URL;
       String fIleX256URL;

@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.FileNotFoundException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 用户信息控制器
@@ -153,6 +154,17 @@ public class UserFileController {
             logger.error(String.format("remove item of User<%s|> under path<%s> failure",
                     authentication.getName(), path), e);
 
+            return new Result<>(e.getMessage());
+        }
+
+    }
+
+    @GetMapping(path = "/remove-trees")
+    public Result<Set<Item>>getRemovedItems(Authentication authentication){
+        try {
+            User user=User.databaseUser(userRepository,authentication);
+            return new Result<>(user.removedItems());
+        } catch (UserNotFoundException e) {
             return new Result<>(e.getMessage());
         }
 
