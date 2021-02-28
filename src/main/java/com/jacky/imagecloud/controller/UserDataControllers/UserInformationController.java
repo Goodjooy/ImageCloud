@@ -2,6 +2,8 @@ package com.jacky.imagecloud.controller.UserDataControllers;
 
 import com.jacky.imagecloud.FileStorage.FileService.HeadImageStorageService;
 import com.jacky.imagecloud.data.Result;
+import com.jacky.imagecloud.data.VerifyCodeContainer;
+import com.jacky.imagecloud.email.EmailSender;
 import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserImage;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
 
 @RestController
 @Scope(value = "session")
@@ -33,7 +36,11 @@ public class UserInformationController {
     @Autowired
     HeadImageStorageService storageService;
 
-    ThreadLocal<String> verifyCode=new NamedThreadLocal<>("verify");
+    @Autowired
+    EmailSender emailSender;
+
+    ReentrantLock lock=new ReentrantLock();
+    VerifyCodeContainer verifyCode;
 
     @GetMapping(path = "/base")
     public Result<User> getUserFullInfo(Authentication authentication) {
@@ -108,7 +115,43 @@ public class UserInformationController {
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(file);
     }
 
+    @GetMapping(path = "/verify")
+    public Result<Boolean>userEmailVerify(
+            Authentication authentication
+    ){
+        User user=User.databaseUser(userRepository,authentication);
+        generateVerifyCode();
+        emailSender.sendVerifyCode(verifyCode.getCode(),user.emailAddress);
+        return new Result<>(Boolean.TRUE);
+    }
+
+    @PostMapping(path = "/verify")
+    public Result<Boolean>verifyCodeCheck(
+            Authentication authentication,
+            @RequestParam(name = "code")String verifyCode
+    ){
+        try {
+            User user = User.databaseUser(userRepository, authentication);
+            var status = this.verifyCode.match(verifyCode);
+            if (status) {
+                user.information.verify = true;
+                userRepository.save(user);
+
+                logger.info(String.format("verify email of User<%s> success",user.emailAddress));
+                return new Result<>(true);
+            }
+            logger.info(String.format("verify email of User<%s> failure",user.emailAddress));
+            return new Result<>(false);
+        }catch (Exception e){
+            logger.info(String.format("verify email of User<%s> failure",authentication.getName()),e);
+            return new Result<>(e.getMessage());
+        }
+    }
+
+
     private void generateVerifyCode(){
-        verifyCode.set(UUID.randomUUID().toString());
+        lock.lock();
+        verifyCode=VerifyCodeContainer.newVerify();
+        lock.unlock();
     }
 }

@@ -37,7 +37,7 @@ public class User {
 
     @JsonIgnore
     @Transient
-    private Map<String,Item> flatRemovedItems;
+    private Map<String, Item> flatRemovedItems;
 
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -69,19 +69,25 @@ public class User {
         user.emailAddress = emailAddress;
         return user;
     }
+
+    public static User databaseUser(UserRepository repository,
+                                    String emailAddress) {
+        User user = authUser(emailAddress);
+        var result = repository.findOne(Example.of(user));
+        if (result.isPresent()) {
+            user = result.get();
+            return user;
+        } else {
+            throw new UserNotFoundException(String.format(
+                    "User<%s> not found", emailAddress
+            ));
+        }
+    }
+
     public static User databaseUser(UserRepository repository,
                                     Authentication authentication) throws UserNotFoundException {
+        return databaseUser(repository,authentication.getName());
 
-            User user = authUser(authentication.getName());
-            var result = repository.findOne(Example.of(user));
-            if (result.isPresent()) {
-                user = result.get();
-                return user;
-            } else {
-                throw new UserNotFoundException(String.format(
-                        "User<%s> not found", authentication.getName()
-                ));
-            }
     }
 
     public static User databaseUser(UserRepository repository,
@@ -89,21 +95,27 @@ public class User {
                                     boolean withHidden,
                                     boolean withRemoved) throws UserNotFoundException {
         User user = databaseUser(repository, authentication);
-        user.constructItem(withHidden,withRemoved);
+        user.constructItem(withHidden, withRemoved);
         return user;
+    }
+
+    public static boolean verifiedUser(UserRepository repository, String emailAddress) {
+        User user = databaseUser(repository,emailAddress);
+        return user.information.verify;
     }
 
     public void constructItem(boolean withHidden, boolean withRemoved) {
         rootItem = (generateItemStruct(withHidden, withRemoved));
     }
+
     @JsonIgnore
     @Transient
-    public Map<String,Item> removedItems(){
-        if (flatRemovedItems==null){
-            flatRemovedItems=new HashMap<>();
-                constructItem(true,true);
+    public Map<String, Item> removedItems() {
+        if (flatRemovedItems == null) {
+            flatRemovedItems = new HashMap<>();
+            constructItem(true, true);
             //find all removed branch
-            flatRemovedItems=findAllRemovedBranch();
+            flatRemovedItems = findAllRemovedBranch();
         }
         return flatRemovedItems;
     }
@@ -128,7 +140,7 @@ public class User {
         }
     }
 
-    private HashMap<String ,Item>findAllRemovedBranch(){
+    private HashMap<String, Item> findAllRemovedBranch() {
         return rootItem.findAllRemoveSubItem();
     }
 

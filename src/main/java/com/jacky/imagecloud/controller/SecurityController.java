@@ -1,16 +1,18 @@
 package com.jacky.imagecloud.controller;
 
 import com.jacky.imagecloud.data.Result;
+import com.jacky.imagecloud.data.VerifyCodeContainer;
+import com.jacky.imagecloud.email.EmailSender;
 import com.jacky.imagecloud.err.UserNotFoundException;
-import com.jacky.imagecloud.models.items.ItemRepository;
 import com.jacky.imagecloud.models.users.User;
-import com.jacky.imagecloud.models.users.UserImageRepository;
-import com.jacky.imagecloud.models.users.UserInformationRepository;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.data.domain.Example;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,12 +26,17 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 用于spring security 交互响应
  */
 @Controller
+@Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class SecurityController {
     private final Logger logger = LoggerFactory.getLogger(SecurityController.class);
     private final Pattern emailPattern = Pattern.compile("^([a-zA-Z0-9]+([-|.])?)+@([a-zA-Z0-9]+(-[a-zA-Z0-9]+)?\\.)+[a-zA-Z]{2,}$");
@@ -38,11 +45,25 @@ public class SecurityController {
     @Autowired
     UserRepository userRepository;
     @Autowired
-    ItemRepository itemRepository;
-    @Autowired
-    UserInformationRepository informationRepository;
-    @Autowired
-    private UserImageRepository imageRepository;
+    EmailSender sender;
+
+    private final Map<String, VerifyCodeContainer> userVerifies = new HashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
+
+    @Scheduled(fixedDelay = 15000)
+    public void checkVerifyCode() {
+        if (userVerifies.size()==0)return;
+        lock.lock();
+        logger.info("start check deactivate code");
+        var removeKeys = userVerifies.keySet().stream().filter(s -> !userVerifies.get(s).isActivate());
+        for (String key :
+                removeKeys.collect(Collectors.toSet())) {
+            userVerifies.remove(key);
+        }
+        logger.info("end check deactivate code");
+        lock.unlock();
+    }
+
 
     @GetMapping("/sign-in")
     public String getSignInPage() {
@@ -59,19 +80,77 @@ public class SecurityController {
         return "reset-paswd";
     }
 
-    @GetMapping("/verify-email-page")
-    public String getVerifyPage(Model model, @RequestParam(name = "email") String emailAddress) {
-        model.addAttribute("email", emailAddress);
-        return "verify-email";
+    @GetMapping("/user-verify")
+    public String userVerify(){
+        return "user-verify";
+    }
+    @GetMapping("/user-find-password")
+    public String  findPassword(
+            Model model,
+            @RequestParam(name = "email")String email
+    ){
+        model.addAttribute("email",email);
+        return "user-find-password";
+    }
+
+    @GetMapping(path = "/find-password")
+    @ResponseBody
+    public Result<Boolean> sendVerifyCode(
+            @RequestParam(name = "email") String emailAddress
+    ) {
+        boolean isVerified = User.verifiedUser(userRepository, emailAddress);
+        if (!isVerified) {
+            return new Result<>(String.format("Not Verify User<%s>", emailAddress));
+        }
+
+        var code = VerifyCodeContainer.newVerify();
+        lock.lock();
+        userVerifies.put(emailAddress, code);
+        lock.unlock();
+
+        sender.sendEmail("find password verify code", code.getCode(), false, emailAddress);
+        return new Result<>(true);
     }
 
     @GetMapping("/session-status")
     @ResponseBody
     public Result<Boolean> SessionStatus(Authentication authentication) {
-        if (authentication==null)
-        return new Result<>(false);
+        if (authentication == null)
+            return new Result<>(false);
         else
             return new Result<>(authentication.isAuthenticated());
+    }
+
+
+    @PostMapping(path = "/find-password")
+    @ResponseBody
+    public Result<Boolean> userVerify(
+            @RequestParam(name = "email") String emailAddress,
+            @RequestParam(name = "code") String verifyCode,
+            @RequestParam(name = "paswd") String newPassword
+    ) {
+        lock.lock();
+        var code = userVerifies.get(emailAddress);
+        lock.unlock();
+        if (code.match(verifyCode)) {
+            User user = User.authUser(emailAddress);
+            var result = userRepository.findOne(Example.of(user));
+            if (result.isPresent()) {
+                user = result.get();
+                if (!encoder.matches(newPassword, user.password) && user.information.verify) {
+                    user.password = encoder.encode(newPassword);
+                    userRepository.save(user);
+
+                    logger.info(String.format("success find back user<%s> [%s]",user.emailAddress,newPassword));
+                    return new Result<>(true);
+                }
+            }
+        }
+        lock.lock();
+        userVerifies.remove(emailAddress);
+        lock.unlock();
+        logger.info(String.format("failure find back user<%s> password",emailAddress));
+        return new Result<>("failure to find back password of USER " + emailAddress);
     }
 
     @PostMapping("/check-email")

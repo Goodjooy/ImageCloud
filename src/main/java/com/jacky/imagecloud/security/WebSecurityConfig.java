@@ -48,8 +48,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http.authorizeRequests()
-                .antMatchers("/sign-up","/check-email","/sharePort","/verify-email-page","/verify-email",
-                        "/session-status").permitAll()
+                .antMatchers("/sign-up",
+                        "/check-email",
+                        "/sharePort",
+                        "/verify-email-page",
+                        "/verify-email",
+                        "/session-status",
+                        "/find-password","/user-find-password").permitAll()
                 .antMatchers("/file", "/upload", "/walk","/dir").hasAnyRole("USER", "ADMIN")
                 .antMatchers("/unchecked/**","/admin/**").hasAnyRole("ADMIN")
 
