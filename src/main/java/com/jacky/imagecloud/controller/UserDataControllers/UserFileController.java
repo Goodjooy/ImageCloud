@@ -189,8 +189,8 @@ public class UserFileController {
                     user.name, user.emailAddress, path, hidden));
             return new Result<>(true);
         } catch (UserNotFoundException | RootPathNotExistException e) {
-            logger.error(String.format("User<%s> create dir %s failure | status<hidden:%s>"
-                    , authentication.getName(), path , hidden), e);
+            logger.error(String.format("User<%s> create dir %s failure | status<hidden:%s> | %s"
+                    , authentication.getName(), path , hidden,e.getLocalizedMessage()), e);
             return new Result<>(false);
         }
     }
@@ -299,7 +299,7 @@ public class UserFileController {
         Item temp = root;
         for (String p :
                 groups) {
-            var t = temp.findTargetItem(p, false);
+            var t = temp.findTargetItem(p, true);
             if (t != null) {
                 items.add(t);
                 temp = t;
@@ -309,7 +309,6 @@ public class UserFileController {
             }
         }
         return items;
-
     }
 
     private void subItemDeleter(List<Item> items, boolean flatRemove) {

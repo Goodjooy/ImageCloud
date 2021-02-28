@@ -10,8 +10,18 @@ public class ItemTime {
     @JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    Integer id;
+    public Integer id;
+
+    @JsonIgnore
+    @OneToOne(targetEntity = Item.class,cascade =CascadeType.ALL)
+    @JoinColumn(name = "item_id",referencedColumnName = "id")
+    public Item item;
 
     @Column(nullable = false)
-    LocalDateTime create;
+    public LocalDateTime create;
+
+    @Column(nullable = false)
+    public LocalDateTime modify;
+
+    public LocalDateTime delete;
 }
