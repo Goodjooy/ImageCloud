@@ -111,7 +111,7 @@ public class UserInformationController {
             @PathVariable(name = "filename") String filename
     ) {
         Resource file = storageService.loadAsResource(filename, size);
-        logger.info(String.format("success find head image <%s> for user<%s>", filename, authentication.getName()));
+        logger.info(String.format("success find head image <%s> for user<%s> | size:%s", filename, authentication.getName(),size));
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(file);
     }
 

@@ -255,6 +255,10 @@
   class UserInformation {
      long totalSize;
      long usedSize;
+    
+     String formatTotalSize;
+     String formatUsedSize;
+  
      boolean verify;
   }
   ```

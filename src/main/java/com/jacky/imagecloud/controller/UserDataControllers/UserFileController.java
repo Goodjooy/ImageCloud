@@ -1,6 +1,7 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
 import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
+import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
 import com.jacky.imagecloud.err.UnknownItemTypeException;
@@ -100,8 +101,8 @@ public class UserFileController {
             itemRepository.save(lastItem);
             userRepository.save(user);
 
-            logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> success status<hidden:%s>",
-                    user.emailAddress, user.name, path, file.getOriginalFilename(), hidden));
+            logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> size<%s> success status<hidden:%s>",
+                    user.emailAddress, user.name, path, file.getOriginalFilename(), FileUploader.formatSize(file.getSize()), hidden));
             return new Result<>(true);
         } catch (Exception e) {
             logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure status<hidden:%s>",

@@ -1,6 +1,7 @@
 package com.jacky.imagecloud.models.users;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
 
 import javax.persistence.*;
 
@@ -26,6 +27,7 @@ public class UserInformation {
     @Column(nullable = false)
     public Boolean verify;
 
+
     public static UserInformation defaultUserInformation(User user){
         UserInformation information=new UserInformation();
         information.user=user;
@@ -35,6 +37,10 @@ public class UserInformation {
 
         return information;
     }
+
+    public String getFormatTotalSize(){return FileUploader.formatSize(totalSize);
+    }
+    public String getFormatUsedSize(){return FileUploader.formatSize(usedSize);}
 
     public Long availableSize() {
         return totalSize - usedSize;
