@@ -1,5 +1,6 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
+import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
 import com.jacky.imagecloud.FileStorage.FileService.HeadImageStorageService;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.data.VerifyCodeContainer;
@@ -35,6 +36,8 @@ public class UserInformationController {
 
     @Autowired
     HeadImageStorageService storageService;
+    @Autowired
+    FileSystemStorageService fileSystemStorageService;
 
     @Autowired
     EmailSender emailSender;
@@ -59,6 +62,8 @@ public class UserInformationController {
     public Result<UserInformation> getUserInfo(Authentication authentication) {
         try {
             User user = User.databaseUser(userRepository, authentication);
+            user.information.checkUsedSize(fileSystemStorageService);
+            userRepository.save(user);
             logger.info(String.format("load User extra Info<%s|%s> success", user.emailAddress, user.name));
             return new Result<>(user.information);
         } catch (UserNotFoundException e) {

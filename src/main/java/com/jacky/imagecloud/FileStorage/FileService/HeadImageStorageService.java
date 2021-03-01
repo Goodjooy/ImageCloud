@@ -1,7 +1,7 @@
 package com.jacky.imagecloud.FileStorage.FileService;
 
 import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
-import com.jacky.imagecloud.FileStorage.StorageProperties;
+import com.jacky.imagecloud.configs.StorageProperties;
 import com.jacky.imagecloud.FileStorage.image.ImageProcess;
 import com.jacky.imagecloud.err.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.ImageSizeNotSupport;
@@ -14,9 +14,7 @@ import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,7 +52,7 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
             throw new StorageException("Failed to store empty file.");
         if (file.getOriginalFilename() == null)
             throw new StorageException("Failed to store file with empty file name");
-        if(image.getSetHeaded()){
+        if (image.getSetHeaded()) {
             delete(image.getFileName());
         }
         var filename = file.getOriginalFilename();
@@ -74,10 +72,10 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
             var x = Math.round((img.getWidth() - splitLen) / 2.0);
             var y = Math.round((img.getHeight() - splitLen) / 2.0);
             var SplitImage = img.getSubimage((int) x, (int) y, splitLen, splitLen);
-            var resizedImage= ImageProcess.transformImageIntoSquareFromBufferedImage(
-                    SplitImage,512
+            var resizedImage = ImageProcess.transformImageIntoSquareFromBufferedImage(
+                    SplitImage, 512
             );
-            ImageProcess.BufferImageToFile(resizedImage,fileFormat,savePath.toFile());
+            ImageProcess.BufferImageToFile(resizedImage, fileFormat, savePath.toFile());
             return image;
         } catch (IOException e) {
             throw new StorageException("Failure to store file", e);
@@ -97,19 +95,25 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
 
     @Override
     public Path load(String filePath) {
+
+
         return localPath.resolve(filePath);
     }
 
     public Resource loadAsResource(String filePath, int size) {
+
+
         if (!sizeRange.contains(size))
             throw new ImageSizeNotSupport(String.format("size<%s> not in range <%s>", size, sizeRange));
         var filename = load(filePath);
         var fileFormat = filePath.substring(filePath.lastIndexOf(".") + 1);
         try {
-            var img = ImageProcess.transformImageFromFile(filename.toFile(),size/512.0f);
-            var output=ImageProcess.BufferImageToOutputStream(img,fileFormat);
+            BufferedImage image;
+
+            image = ImageProcess.transformImageFromFile(filename.toFile(), size / 512.0f);
+            var output = ImageProcess.BufferImageToOutputStream(image, fileFormat);
             return new OutputStreamResource(output, filename);
-        } catch (IOException e) {
+        } catch (IOException | FileFormatNotSupportException e) {
             throw new StorageException("Fail to get resource", e);
         }
     }

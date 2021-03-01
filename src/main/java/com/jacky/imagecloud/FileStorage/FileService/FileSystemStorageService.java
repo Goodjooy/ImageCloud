@@ -1,8 +1,5 @@
 package com.jacky.imagecloud.FileStorage.FileService;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.awt.image.RenderedImage;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
@@ -16,7 +13,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
-import com.jacky.imagecloud.FileStorage.StorageProperties;
+import com.jacky.imagecloud.configs.StorageProperties;
 import com.jacky.imagecloud.FileStorage.image.ImageProcess;
 import com.jacky.imagecloud.err.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.StorageException;
@@ -78,7 +75,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         var copyStream=copyStream(inputStream);
         //图像压缩比计算
         var ThumbnailImage = ImageProcess.transformImage(
-                new ByteArrayInputStream(copyStream.toByteArray()),fileName,maxSize);
+                new ByteArrayInputStream(copyStream.toByteArray()),fileName,(int) maxSize);
         var RawPath = rootRawLocation.resolve(
                 Path.of(Objects.requireNonNull(fileName))
         ).normalize().toAbsolutePath();

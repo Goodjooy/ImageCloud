@@ -1,9 +1,15 @@
 package com.jacky.imagecloud.models.users;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
 import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
+import com.jacky.imagecloud.models.items.ItemType;
 
 import javax.persistence.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.stream.Collectors;
 
 @Entity
 public class UserInformation {
@@ -51,5 +57,22 @@ public class UserInformation {
         t = t < 0 ? 0 : t;
         usedSize = t;
     }
-
+    public void checkUsedSize(FileSystemStorageService storageService){
+        var allFiles=user.seizedFiles.stream().filter(item -> item.getItemType()== ItemType.FILE)
+                .map(item -> item.file.filePath);
+        var allFilesPath=allFiles.map(storageService::load);
+        var allFileSize=allFilesPath.map(path -> {
+            try {
+                return Files.size(path);
+            } catch (IOException e) {
+                return 0L;
+            }
+        }).collect(Collectors.toList());
+        long usedSize=0;
+        for (long size :
+                allFileSize) {
+            usedSize+=size;
+        }
+        this.usedSize=usedSize;
+    }
 }

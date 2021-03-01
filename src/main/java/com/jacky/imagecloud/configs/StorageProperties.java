@@ -1,4 +1,4 @@
-package com.jacky.imagecloud.FileStorage;
+package com.jacky.imagecloud.configs;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

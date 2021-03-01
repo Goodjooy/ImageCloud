@@ -5,10 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -17,14 +17,14 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     UserRepository userRepository;
     PasswordEncoder encoder = new BCryptPasswordEncoder();
-    Logger logger= LoggerFactory.getLogger(WebSecurityConfig.class);
+    Logger logger = LoggerFactory.getLogger(WebSecurityConfig.class);
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         //身份验证
         auth
                 //数据库身份验证
-                .userDetailsService(new MySQLUserDetailsService(userRepository,logger)).passwordEncoder(encoder)
+                .userDetailsService(new MySQLUserDetailsService(userRepository, logger)).passwordEncoder(encoder)
 
                 .and()
 
@@ -54,9 +54,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/verify-email-page",
                         "/verify-email",
                         "/session-status",
-                        "/find-password","/user-find-password").permitAll()
-                .antMatchers("/file", "/upload", "/walk","/dir").hasAnyRole("USER", "ADMIN")
-                .antMatchers("/unchecked/**","/admin/**").hasAnyRole("ADMIN")
+                        "/find-password", "/user-find-password").permitAll()
+                .antMatchers("/file", "/upload", "/walk", "/dir").hasAnyRole("USER", "ADMIN")
+                .antMatchers("/unchecked/**", "/admin/**").hasAnyRole("ADMIN")
 
                 .anyRequest()
                 .authenticated()
@@ -81,7 +81,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
                 .and()
                 .sessionManagement()
-
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .and()
+                .rememberMe()
+                .tokenValiditySeconds(12 * 3600 * 60)
 
                 .and() //;
                 .csrf().disable()

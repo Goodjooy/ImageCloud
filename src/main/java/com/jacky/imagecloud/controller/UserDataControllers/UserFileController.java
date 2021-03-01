@@ -67,24 +67,24 @@ public class UserFileController {
             item.sortSubItems(sort, reverse);
 
             logger.info(String.format("load item of User<%s|%s> in path<%s> success status<withHidden:%s sort: %s reverse : %s>",
-                    user.emailAddress, user.name, path, withHidden,sort,reverse));
+                    user.emailAddress, user.name, path, withHidden, sort, reverse));
             return new Result<>(item);
         } catch (Exception e) {
             logger.error(String.format("load item of User<%s> in path<%s> failure status<withHidden:%s sort: %s reverse : %s>",
-                    authentication.getName(), path, withHidden,sort ,reverse), e);
+                    authentication.getName(), path, withHidden, sort, reverse), e);
             return new Result<>(e.getMessage());
         }
     }
 
     @PostMapping(path = "/file")
     public Result<Boolean> uploadFile(Authentication authentication,
-                                     @RequestParam(name = "path") String path,
-                                     @RequestParam(name = "file") MultipartFile file,
-                                     @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
+                                      @RequestParam(name = "path") String path,
+                                      @RequestParam(name = "file") MultipartFile file,
+                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
             var user = getAndInitUser(authentication,
-                    true,false);
+                    true, false);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
@@ -183,7 +183,7 @@ public class UserFileController {
                                      @RequestParam(name = "path", defaultValue = "/root") String path,
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
         try {
-            var user = getAndInitUser(authentication, true,false);
+            var user = getAndInitUser(authentication, true, false);
 
             appendNotExistItems(user, path, hidden, false);
             userRepository.save(user);
