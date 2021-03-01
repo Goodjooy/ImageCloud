@@ -6,10 +6,7 @@ import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
 import com.jacky.imagecloud.err.UnknownItemTypeException;
 import com.jacky.imagecloud.err.UserNotFoundException;
-import com.jacky.imagecloud.models.items.FileStorageRepository;
-import com.jacky.imagecloud.models.items.Item;
-import com.jacky.imagecloud.models.items.ItemRepository;
-import com.jacky.imagecloud.models.items.ItemType;
+import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
@@ -22,10 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.FileNotFoundException;
+import java.nio.file.FileAlreadyExistsException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 用户信息控制器
@@ -60,26 +57,30 @@ public class UserFileController {
     @GetMapping(path = "/file")
     public Result<Item> getFile(Authentication authentication,
                                 @RequestParam(name = "path", defaultValue = "root") String path,
-                                @RequestParam(name = "withHidden", defaultValue = "false") boolean withHidden) {
+                                @RequestParam(name = "withHidden", defaultValue = "false") boolean withHidden,
+                                @RequestParam(name = "sort", defaultValue = "name") ItemSort sort,
+                                @RequestParam(name = "reverse", defaultValue = "false") boolean reverse) {
         try {
             var user = getAndInitUser(authentication, withHidden, false);
             var item = user.rootItem.getTargetItem(path, withHidden);
 
-            logger.info(String.format("load item of User<%s|%s> in path<%s> success status<withHidden:%s>",
-                    user.emailAddress, user.name, path, withHidden));
+            item.sortSubItems(sort, reverse);
+
+            logger.info(String.format("load item of User<%s|%s> in path<%s> success status<withHidden:%s sort: %s reverse : %s>",
+                    user.emailAddress, user.name, path, withHidden,sort,reverse));
             return new Result<>(item);
         } catch (Exception e) {
-            logger.error(String.format("load item of User<%s> in path<%s> failure status<withHidden:%s>",
-                    authentication.getName(), path, withHidden), e);
+            logger.error(String.format("load item of User<%s> in path<%s> failure status<withHidden:%s sort: %s reverse : %s>",
+                    authentication.getName(), path, withHidden,sort ,reverse), e);
             return new Result<>(e.getMessage());
         }
     }
 
     @PostMapping(path = "/file")
     public Result<Boolean> uploadFile(Authentication authentication,
-                                      @RequestParam(name = "path") String path,
-                                      @RequestParam(name = "file") MultipartFile file,
-                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
+                                     @RequestParam(name = "path") String path,
+                                     @RequestParam(name = "file") MultipartFile file,
+                                     @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
             var user = getAndInitUser(authentication);
@@ -88,7 +89,7 @@ public class UserFileController {
                     String.format("user space<%d|%d> not enough",
                             user.information.availableSize(), file.getSize()));
             if (file.isEmpty()) return new Result<>("empty file");
-            Item last = appendNotExistItems(user, path, hidden);
+            Item last = appendNotExistItems(user, path, hidden, true);
             var lastItem = Item.FileItem(user, last, file.getOriginalFilename(), hidden);
             var fileStorage = fileUploader.storage(file);
             fileStorage.item = lastItem;
@@ -103,7 +104,7 @@ public class UserFileController {
 
             logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> size<%s> success status<hidden:%s>",
                     user.emailAddress, user.name, path, file.getOriginalFilename(), FileUploader.formatSize(file.getSize()), hidden));
-            return new Result<>(true);
+            return new Result<>(true, false, "");
         } catch (Exception e) {
             logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure status<hidden:%s>",
                     authentication.getName(), path, file.isEmpty() ? "unknown" : file.getOriginalFilename(), hidden), e);
@@ -122,7 +123,7 @@ public class UserFileController {
     ) {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
-            User user = getAndInitUser(authentication, true,false);
+            User user = getAndInitUser(authentication, true, false);
 
             if (!encoder.matches(password, user.password)) return new Result<>("wrong password!");
             if (path.equals("/root")) return new Result<>("can not remove /root dir");
@@ -149,12 +150,12 @@ public class UserFileController {
                 default:
                     throw new UnknownItemTypeException("unknown item type");
             }
-            logger.info(String.format("remove item of User<%s|%s> under path<%s> success | status<flat:%s; removeTargetDir%s>",
+            logger.info(String.format("remove item of User<%s|%s> under path<%s> success | status<flat:%s; removeTargetDir:%s>",
                     user.emailAddress, user.name, path, flatRemove, removeTargetDir));
             return new Result<>(true);
 
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | UnknownItemTypeException e) {
-            logger.error(String.format("remove item of User<%s|> under path<%s> failure | status<flat:%s; removeTargetDir%s>",
+            logger.error(String.format("remove item of User<%s|> under path<%s> failure | status<flat:%s; removeTargetDir:%s>",
                     authentication.getName(), path, flatRemove, removeTargetDir), e);
 
             return new Result<>(e.getMessage());
@@ -163,7 +164,7 @@ public class UserFileController {
     }
 
     @GetMapping(path = "/remove-trees")
-    public Result<Map<String ,Item>> getRemovedItems(Authentication authentication) {
+    public Result<Map<String, Item>> getRemovedItems(Authentication authentication) {
         try {
             User user = User.databaseUser(userRepository, authentication);
 
@@ -183,14 +184,14 @@ public class UserFileController {
         try {
             var user = getAndInitUser(authentication, false);
 
-            appendNotExistItems(user, path, hidden);
+            appendNotExistItems(user, path, hidden, false);
             userRepository.save(user);
             logger.info(String.format("User<%s|%s> Create path %s Success! | status<hidden:%s>",
                     user.name, user.emailAddress, path, hidden));
             return new Result<>(true);
-        } catch (UserNotFoundException | RootPathNotExistException e) {
+        } catch (UserNotFoundException | RootPathNotExistException | FileAlreadyExistsException e) {
             logger.error(String.format("User<%s> create dir %s failure | status<hidden:%s> | %s"
-                    , authentication.getName(), path , hidden,e.getLocalizedMessage()), e);
+                    , authentication.getName(), path, hidden, e.getLocalizedMessage()), e);
             return new Result<>(false);
         }
     }
@@ -199,7 +200,7 @@ public class UserFileController {
     public Result<String> fileRename(Authentication authentication,
                                      @RequestParam(name = "oldPath", defaultValue = "/root") String oldFilePath,
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
-        var temp = getFile(authentication, oldFilePath, true);
+        var temp = getFile(authentication, oldFilePath, true, ItemSort.name, false);
         if (!temp.err) {
             temp.data.setItemName(newName);
             itemRepository.save(temp.data);
@@ -218,14 +219,14 @@ public class UserFileController {
             @RequestParam(name = "path", defaultValue = "/root") String targetPath
     ) {
         try {
-            var user = getAndInitUser(authentication, true,false);
+            var user = getAndInitUser(authentication, true, false);
             var target = user.rootItem.getTargetItem(targetPath, true);
             target.hidden = !target.hidden;
 
             userRepository.save(user);
             itemRepository.save(target);
 
-            logger.info(String.format("change file status in path<%s> for User<%s|%s> success[->%s]",
+            logger.info(String.format("change file status in path<%s> for User<%s|%s> success[hidden->%s]",
                     targetPath, user.emailAddress, user.name, target.hidden));
             return new Result<>(target.hidden);
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
@@ -245,7 +246,7 @@ public class UserFileController {
             user.constructItem(true, true);
             var target = user.rootItem.getTargetItem(targetPath, true);
 
-            target.removed = false;
+            target.setRemoved(false);
             userRepository.save(user);
             itemRepository.save(target);
 
@@ -329,22 +330,32 @@ public class UserFileController {
             }
             user.seizedFiles.remove(item);
         }
-        item.removed = true;
+        item.setRemoved(true);
         itemRepository.save(item);
         logger.info(String.format("Remove file success<%s> [totally]", item.getItemName()));
     }
 
-    private Item appendNotExistItems(User user, String path, boolean hidden) throws RootPathNotExistException {
+    private Item appendNotExistItems(User user,
+                                     String path,
+                                     boolean hidden,
+                                     boolean fileSave) throws RootPathNotExistException, FileAlreadyExistsException {
         var items = GetItemTree(path, user.rootItem, hidden);
         Item lastItem = Item.DefaultItem();
+
+        int count = 0;
+
         for (Item item :
                 items) {
             if (!user.seizedFiles.contains(item)) {
                 item.setParentItem(lastItem);
                 user.addItem(item);
                 itemRepository.save(item);
+                count++;
             }
             lastItem = item;
+        }
+        if (count == items.size() && !fileSave) {
+            throw new FileAlreadyExistsException(String.format("all directory in path<%s> is exist", path));
         }
         return lastItem;
     }

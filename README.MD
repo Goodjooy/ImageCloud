@@ -133,7 +133,7 @@
   * 参数列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
-      | POST | path={*targetFileTochangeStatus*} | path->要改变状态的文件夹或者文件 | 改变给定文件夹或者文件隐藏状态<br>**不会影响子文件夹和文件的状态** | USER |```Result<Boolean>```|
+      | POST | path={*targetFileToChangeStatus*} | path->要改变状态的文件夹或者文件 | 改变给定文件夹或者文件隐藏状态<br>**不会影响子文件夹和文件的状态** | USER |```Result<Boolean>```|
 * ```/restore-file```
   * 恢复浅层删除的文件或者文件夹
   * 参数列表
@@ -219,7 +219,7 @@
   class Item{
     String itemName;
     ItemType itemType;
-    Set<Item> subItems;
+    List<Item> subItems;
     FileStorage file;
     boolean hidden;
   }

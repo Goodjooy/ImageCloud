@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
-
+@Entity
 public class ItemTime {
     @JsonIgnore
     @Id
@@ -14,14 +14,31 @@ public class ItemTime {
 
     @JsonIgnore
     @OneToOne(targetEntity = Item.class,cascade =CascadeType.ALL)
-    @JoinColumn(name = "item_id",referencedColumnName = "id")
+    @JoinColumn(name = "item_id",referencedColumnName = "id",nullable = false)
     public Item item;
 
     @Column(nullable = false)
-    public LocalDateTime create;
+    public LocalDateTime createTime;
 
     @Column(nullable = false)
-    public LocalDateTime modify;
+    public LocalDateTime modifyTime;
 
-    public LocalDateTime delete;
+    public LocalDateTime deleteTime;
+
+    public static ItemTime nowCreateTime(Item item){
+        ItemTime time=new ItemTime();
+        time.createTime=LocalDateTime.now();
+        time.modifyTime=LocalDateTime.now();
+        time.deleteTime=null;
+
+        time.item=item;
+        return time;
+    }
+
+    public void modified(){
+        modifyTime=LocalDateTime.now();
+    }
+    public void deleted(){
+        deleteTime=LocalDateTime.now();
+    }
 }

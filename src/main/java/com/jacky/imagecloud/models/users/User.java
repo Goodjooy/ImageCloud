@@ -126,7 +126,7 @@ public class User {
         Set<Item> filteredItems = seizedFiles.stream().filter(item ->
         {
             // 没有显示隐藏且为隐藏文件           没有显示移除且被移除
-            return (withHidden || !item.hidden) && (withRemoved || !item.removed);
+            return (withHidden || !item.hidden) && (withRemoved || !item.getRemoved());
         }).collect(Collectors.toSet());
 
         rootParent.getAllSUbItemFromSet(filteredItems);
