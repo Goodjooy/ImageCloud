@@ -32,7 +32,7 @@ public class Item {
     @JoinColumn(name = "user_id")
     private User user;
 
-    //@JsonIgnore
+    @JsonIgnore
     @OneToOne(mappedBy = "item",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
     private ItemTime time;
 
@@ -40,7 +40,6 @@ public class Item {
     @Column(name = "parent")
     private Integer parentID;
 
-    // @JsonIgnore
     @Transient
     private List<Item> SubItems;
 

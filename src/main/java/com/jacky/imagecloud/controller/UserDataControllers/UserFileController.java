@@ -83,7 +83,8 @@ public class UserFileController {
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
-            var user = getAndInitUser(authentication);
+            var user = getAndInitUser(authentication,
+                    true,false);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
@@ -182,7 +183,7 @@ public class UserFileController {
                                      @RequestParam(name = "path", defaultValue = "/root") String path,
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
         try {
-            var user = getAndInitUser(authentication, false);
+            var user = getAndInitUser(authentication, true,false);
 
             appendNotExistItems(user, path, hidden, false);
             userRepository.save(user);

@@ -2,6 +2,7 @@ package com.jacky.imagecloud.FileStorage.FileService;
 
 import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
 import com.jacky.imagecloud.FileStorage.StorageProperties;
+import com.jacky.imagecloud.FileStorage.image.ImageProcess;
 import com.jacky.imagecloud.err.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.ImageSizeNotSupport;
 import com.jacky.imagecloud.err.StorageException;
@@ -56,7 +57,6 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         if(image.getSetHeaded()){
             delete(image.getFileName());
         }
-
         var filename = file.getOriginalFilename();
         var generateName = image.getFileName().split("\\.")[0];
         var fileFormat = filename.substring(filename.lastIndexOf(".") + 1);
@@ -70,18 +70,14 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         image.setSetHeaded(true);
         try {
             var img = ImageIO.read(file.getInputStream());
-            var flag = img.getType();
-
             var splitLen = Math.min(img.getWidth(), img.getHeight());
             var x = Math.round((img.getWidth() - splitLen) / 2.0);
             var y = Math.round((img.getHeight() - splitLen) / 2.0);
             var SplitImage = img.getSubimage((int) x, (int) y, splitLen, splitLen);
-
-            var maxSized = SplitImage.getScaledInstance(512, 512, Image.SCALE_SMOOTH);
-            var result = new BufferedImage(512, 512, flag);
-            result.getGraphics().drawImage(maxSized, 0, 0, null);
-
-            ImageIO.write(result, fileFormat, savePath.toFile());
+            var resizedImage= ImageProcess.transformImageIntoSquareFromBufferedImage(
+                    SplitImage,512
+            );
+            ImageProcess.BufferImageToFile(resizedImage,fileFormat,savePath.toFile());
             return image;
         } catch (IOException e) {
             throw new StorageException("Failure to store file", e);
@@ -110,18 +106,9 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         var filename = load(filePath);
         var fileFormat = filePath.substring(filePath.lastIndexOf(".") + 1);
         try {
-            var img = ImageIO.read(filename.toFile());
-            var flag = img.getType();
-
-            var midImage = img.getScaledInstance(size, size, Image.SCALE_SMOOTH);
-            var result = new BufferedImage(size, size, flag);
-            result.getGraphics().drawImage(midImage, 0, 0, null);
-
-            var Output = new ByteArrayOutputStream();
-
-            ImageIO.write(result, fileFormat, Output);
-
-            return new OutputStreamResource(Output, filename);
+            var img = ImageProcess.transformImageFromFile(filename.toFile(),size/512.0f);
+            var output=ImageProcess.BufferImageToOutputStream(img,fileFormat);
+            return new OutputStreamResource(output, filename);
         } catch (IOException e) {
             throw new StorageException("Fail to get resource", e);
         }

@@ -15,7 +15,9 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
 import com.jacky.imagecloud.FileStorage.StorageProperties;
+import com.jacky.imagecloud.FileStorage.image.ImageProcess;
 import com.jacky.imagecloud.err.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.StorageException;
 import com.jacky.imagecloud.err.StorageFileNotFoundException;
@@ -37,7 +39,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     private final Path rootRawLocation;
     private final Path rootThumbnailLocation;
 
-    private static final float MaxWidth = 256;
+    private static final float maxSize = 256;
     private static final float MaxHeight = 256;
 
     private static final float scale = 0.4f;
@@ -74,23 +76,9 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             throw new FileFormatNotSupportException(String.format("file format name<%s> not support",fileExtra));
 
         var copyStream=copyStream(inputStream);
-        var RawImage = ImageIO.read(new ByteArrayInputStream(copyStream.toByteArray()));
-        int width = RawImage.getWidth();
-        int height = RawImage.getHeight();
-        int flag = RawImage.getType();
-
         //图像压缩比计算
-        float consult = (width > height ? MaxWidth : MaxHeight) / (Math.max(width, height));
-        consult = consult - 1 > 0 ? 1 : consult;
-        //float consult = scale;
-        int TWidth = Math.round(width * consult);
-        int THeight = Math.round(height * consult);
-        var ThumbnailImageMid = RawImage.getScaledInstance(TWidth, THeight,
-                Image.SCALE_SMOOTH);
-        var ThumbnailImage = new BufferedImage(TWidth, THeight, flag);
-
-        ThumbnailImage.getGraphics().drawImage(ThumbnailImageMid, 0, 0, null);
-
+        var ThumbnailImage = ImageProcess.transformImage(
+                new ByteArrayInputStream(copyStream.toByteArray()),fileName,maxSize);
         var RawPath = rootRawLocation.resolve(
                 Path.of(Objects.requireNonNull(fileName))
         ).normalize().toAbsolutePath();
@@ -102,10 +90,8 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
                 ThumbnailPath.getParent().equals(rootThumbnailLocation.toAbsolutePath()))
             throw new StorageException("Cannot store file outside current directory.");
 
-
-        //ImageIO.write(RawImage, fileExtra, RawPath.toFile());
         Files.copy(new ByteArrayInputStream(copyStream.toByteArray()),RawPath,StandardCopyOption.REPLACE_EXISTING);
-        ImageIO.write((RenderedImage) ThumbnailImage, fileExtra, ThumbnailPath.toFile());
+        ImageIO.write(ThumbnailImage, fileExtra, ThumbnailPath.toFile());
     }
 
     @Override
@@ -186,11 +172,13 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             if (resource.exists() || resource.isReadable()) {
                 return resource;
             } else {
-                throw new StorageFileNotFoundException(
-                        "Could not read thumbnail file: " + filename
-                );
+                Path RawFile=load(filename);
+                var Image= ImageProcess.transformImage(RawFile.toFile(), (int) maxSize);
+                ImageProcess.BufferImageToFile(Image,ImageProcess.getFileFormat(file),file.toFile());
+                return  new OutputStreamResource(ImageProcess.BufferImageToOutputStream(Image,
+                        ImageProcess.getFileFormat(filename)),file);
             }
-        } catch (MalformedURLException e) {
+        } catch (IOException e) {
             throw new StorageFileNotFoundException("Could not read thumbnail file: " + filename, e);
         }
     }
