@@ -112,7 +112,7 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
-      | GET | path={*targetPath*}&<br>withHidden={*withHiddenItems*:**false**} | path->要獲取的文件夾或者文件信息的路徑;<br>withHidden(boolean)->是否忽略隐藏文件 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭* | USER | ```Result<Item>``` |
+      | GET | path={*targetPath*}&<br>withHidden={*withHiddenItems*:**false**}&<br>sort={*sortDependentBy*:**name**}&<br>reverse={*reverseSort*:**false**} | path->要獲取的文件夾或者文件信息的路徑;<br>withHidden(boolean)->是否忽略隐藏文件;<br>sort->排序方式；<br>reverse->是否反转排序 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭*<br>*可用的排序方法<br>{`name`, `createTime`,`modifyTime`}* | USER | ```Result<Item>``` |
       | POST | path={*fileUploadDirPath*}&<br>file={*fileToUpload*}&<br>hidden={*createHiddenFiles*:**false**} | path->文件上傳的位置（不包含文件名）;<br>file->要上傳的文件;<br>hidden(bool)->是否创建隐藏文件 | 將文件上傳到指定位置<br>*路徑以```/root```開頭*<br>*如果路徑不存在，將會自動創建文件夾* | USER | ```Result<Boolean>```|
       | DELETE | path={*targetPathToRemove*}&<br>paswd={*userPassword*}&<br>flat={*removeFlatly*:**true**}&<br>removeTargetDir={*removeTargetDir*:**false**} | path->要刪除的文件夾或文件;<br>paswd->用戶密碼;<br>flat(bool)->是否为浅层删除；<br>removeTargetDir(bool)->是否删除指定的文件夹 | 將指定位置文件或文件夾刪除<br>*路徑以```/root```開頭*<br>*浅层删除不会删除服务器文件，未来可能提供接口供恢复* | USER |```Result<Boolean>```|
 
