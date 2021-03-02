@@ -1,5 +1,6 @@
 package com.jacky.imagecloud.security;
 
+import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     UserRepository userRepository;
     PasswordEncoder encoder = new BCryptPasswordEncoder();
-    Logger logger = LoggerFactory.getLogger(WebSecurityConfig.class);
+    LoggerHandle logger = LoggerHandle.newLogger(WebSecurityConfig.class);
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
@@ -85,6 +86,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .maximumSessions(1)
+                .and()
+
                 .and()
                 .rememberMe()
                 .tokenValiditySeconds(12 * 3600 * 60)

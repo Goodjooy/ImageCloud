@@ -1,5 +1,7 @@
 package com.jacky.imagecloud.security;
 
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
 import org.slf4j.Logger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
@@ -8,9 +10,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class LogOutSuccessHandle implements LogoutSuccessHandler {
-    private final Logger logger;
+    private final LoggerHandle logger;
 
-    public LogOutSuccessHandle(Logger logger){
+    public LogOutSuccessHandle(LoggerHandle logger){
         this.logger = logger;
     }
     @Override
@@ -18,6 +20,6 @@ public class LogOutSuccessHandle implements LogoutSuccessHandler {
             HttpServletRequest request,
             HttpServletResponse response,
             Authentication authentication) {
-        logger.info(String.format("user<%s> logout success",authentication.getName()));
+        logger.authenticationSuccess(authentication.getName(), Info.of("User Logout","Operate"));
     }
 }

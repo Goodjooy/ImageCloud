@@ -142,7 +142,31 @@ public class LoggerHandle {
         ));
     }
 
-    public void fileOperateSuccess(String filename){}
+    public void fileOperateSuccess(String filename){//TODO: 文件操作成功日志
+         }
+
+    public void fileOperateFailure(String filename){
+        //TODO: 文件操作失败日志
+    }
+
+    public void authenticationSuccess(String username,Info<?>...extraInfo){
+        logger.info(String.format(
+                "User Authentication Operation Success | User<%s> |%s",
+                username,extraInformation(extraInfo)
+        ));
+    }
+    public void authenticationFailure(String username,Throwable throwable,Info<?>...extraInfo){
+        logger.error(String.format(
+                "User Authentication Operation Failure | User<%s> |%s",
+                username,extraInformation(extraInfo)
+        ),throwable);
+    }
+    public void authenticationFailure(String username,Info<?>...extraInfo){
+        logger.error(String.format(
+                "User Authentication Operation Failure | User<%s> |%s",
+                username,extraInformation(extraInfo)
+        ));
+    }
 
 
     public void operateFailure(String description,Info<?>... infoList) {

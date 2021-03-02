@@ -1,5 +1,7 @@
 package com.jacky.imagecloud.security;
 
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
 import org.slf4j.Logger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -11,8 +13,8 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public class LoginSuccessHandle implements AuthenticationSuccessHandler {
-    Logger logger;
-    public LoginSuccessHandle(Logger logger){
+    LoggerHandle logger;
+    public LoginSuccessHandle(LoggerHandle logger){
         this.logger = logger;
     }
     /**
@@ -48,7 +50,7 @@ public class LoginSuccessHandle implements AuthenticationSuccessHandler {
                                         Authentication authentication
     ) throws IOException {
         //身份验证成功后行为
-        logger.info(String.format("user[%s] authentication successful",authentication.getName()));
+        logger.authenticationSuccess(authentication.getName(),Info.of("Finish Authentication","message"));
 
         response.setHeader("Content-Type", "application/json");
         var writer=response.getWriter();

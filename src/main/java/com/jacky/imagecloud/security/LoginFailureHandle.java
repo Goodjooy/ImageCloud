@@ -1,5 +1,6 @@
 package com.jacky.imagecloud.security;
 
+import com.jacky.imagecloud.data.LoggerHandle;
 import org.slf4j.Logger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -9,9 +10,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public class LoginFailureHandle implements AuthenticationFailureHandler {
-    Logger logger;
+    LoggerHandle logger;
 
-    public LoginFailureHandle(Logger logger) {
+    public LoginFailureHandle(LoggerHandle logger) {
         this.logger = logger;
     }
 
@@ -28,8 +29,7 @@ public class LoginFailureHandle implements AuthenticationFailureHandler {
             HttpServletResponse response,
             AuthenticationException exception) throws IOException {
         //失败情况
-        //重定向403响应器
-        logger.info(String.format("User[%s] authentication failure", request.getParameter("uid")), exception);
+        logger.authenticationFailure(request.getParameter("uid"),exception);
         var writer = response.getWriter();
         writer.format(
                 "{\"data\":null," +

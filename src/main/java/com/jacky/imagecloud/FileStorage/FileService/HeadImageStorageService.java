@@ -52,9 +52,7 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
             throw new StorageException("Failed to store empty file.");
         if (file.getOriginalFilename() == null)
             throw new StorageException("Failed to store file with empty file name");
-        if (image.getSetHeaded()) {
-            delete(image.getFileName());
-        }
+
         var filename = file.getOriginalFilename();
         var generateName = image.getFileName().split("\\.")[0];
         var fileFormat = filename.substring(filename.lastIndexOf(".") + 1);

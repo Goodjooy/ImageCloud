@@ -1,5 +1,7 @@
 package com.jacky.imagecloud.security;
 
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
@@ -11,9 +13,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 public class MySQLUserDetailsService implements UserDetailsService {
     UserRepository userRepository;
-    private final Logger logger;
+    private final LoggerHandle logger;
 
-    public MySQLUserDetailsService(UserRepository userRepository, Logger logger){
+    public MySQLUserDetailsService(UserRepository userRepository, LoggerHandle logger){
         this.userRepository=userRepository;
         this.logger = logger;
     }
@@ -42,10 +44,10 @@ public class MySQLUserDetailsService implements UserDetailsService {
             builder.password(u.password);
             builder.roles("USER");
 
-            logger.info(String.format("find user<%s> in database",emailAddress));
+            logger.authenticationSuccess(emailAddress, Info.of("Find in Database","operate"));
             return builder.build();
         }
-        logger.info(String.format("user<%s> not in database",emailAddress));
+        logger.authenticationSuccess(emailAddress, Info.of("Not Find in Database","operate"));
         throw new UsernameNotFoundException(emailAddress);
     }
 }
