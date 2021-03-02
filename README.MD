@@ -114,7 +114,7 @@
       | :--: | :--: | :--: | :--: | :--: |:------: |
       | GET | path={*targetPath*}&<br>withHidden={*withHiddenItems*:**false**}&<br>sort={*sortDependentBy*:**name**}&<br>reverse={*reverseSort*:**false**} | path->要獲取的文件夾或者文件信息的路徑;<br>withHidden(boolean)->是否忽略隐藏文件;<br>sort->排序方式；<br>reverse->是否反转排序 | 獲取指定文件夾或文件信息<br>*路徑以```/root```開頭*<br>*可用的排序方法<br>{`name`, `createTime`,`modifyTime`}* | USER | ```Result<Item>``` |
       | POST | path={*fileUploadDirPath*}&<br>file={*fileToUpload*}&<br>hidden={*createHiddenFiles*:**false**} | path->文件上傳的位置（不包含文件名）;<br>file->要上傳的文件;<br>hidden(bool)->是否创建隐藏文件 | 將文件上傳到指定位置<br>*路徑以```/root```開頭*<br>*如果路徑不存在，將會自動創建文件夾* | USER | ```Result<Boolean>```|
-      | DELETE | path={*targetPathToRemove*}&<br>paswd={*userPassword*}&<br>flat={*removeFlatly*:**true**}&<br>removeTargetDir={*removeTargetDir*:**false**} | path->要刪除的文件夾或文件;<br>paswd->用戶密碼;<br>flat(bool)->是否为浅层删除；<br>removeTargetDir(bool)->是否删除指定的文件夹 | 將指定位置文件或文件夾刪除<br>*路徑以```/root```開頭*<br>*浅层删除不会删除服务器文件，未来可能提供接口供恢复* | USER |```Result<Boolean>```|
+      | DELETE | path={*targetPathsToRemove*}&<br>paswd={*userPassword*}&<br>flat={*removeFlatly*:**true**}&<br>removeTargetDir={*removeTargetDir*:**false**} | path->要刪除的文件夾或文件**支持多参数，用`,`分割**;<br>paswd->用戶密碼;<br>flat(bool)->是否为浅层删除；<br>removeTargetDir(bool)->是否删除指定的文件夹 | 將指定位置文件或文件夾刪除<br>*路徑以```/root```開頭*<br>*浅层删除不会删除服务器文件，未来可能提供接口供恢复* | USER |```Result<List<Result<Boolean>>>```|
 
 * ```/dir```
   * 創建文件夾接口
@@ -133,7 +133,7 @@
   * 参数列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
-      | POST | path={*targetFileToChangeStatus*} | path->要改变状态的文件夹或者文件 | 改变给定文件夹或者文件隐藏状态<br>**不会影响子文件夹和文件的状态** | USER |```Result<Boolean>```|
+      | POST | path={*targetFilesToChangeStatus*} | path->要改变状态的文件夹或者文件**支持多参数，用`,`分割** | 改变给定文件夹或者文件隐藏状态<br>**不会影响子文件夹和文件的状态** | USER |```Result<List<Result<Boolean>>>```|
 * ```/restore-file```
   * 恢复浅层删除的文件或者文件夹
   * 参数列表

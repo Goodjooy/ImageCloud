@@ -23,6 +23,8 @@ import java.nio.file.FileAlreadyExistsException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 用户信息控制器
@@ -53,7 +55,6 @@ public class UserFileController {
     FileSystemStorageService fileUploader;
     PasswordEncoder encoder = new BCryptPasswordEncoder();
 
-
     @GetMapping(path = "/file")
     public Result<Item> getFile(Authentication authentication,
                                 @RequestParam(name = "path", defaultValue = "root") String path,
@@ -61,7 +62,7 @@ public class UserFileController {
                                 @RequestParam(name = "sort", defaultValue = "name") ItemSort sort,
                                 @RequestParam(name = "reverse", defaultValue = "false") boolean reverse) {
         try {
-            var user = getAndInitUser(authentication, withHidden, false);
+            var user = getAndInitUser(authentication, withHidden);
             var item = user.rootItem.getTargetItem(path, withHidden);
 
             item.sortSubItems(sort, reverse);
@@ -84,7 +85,7 @@ public class UserFileController {
 
         try {
             var user = getAndInitUser(authentication,
-                    true, false);
+                    true);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
@@ -116,48 +117,56 @@ public class UserFileController {
 
 
     @DeleteMapping(path = "/file")
-    public Result<Boolean> deleteFile(Authentication authentication,
-                                      @RequestParam(name = "path", defaultValue = "/root") String path,
-                                      @RequestParam(name = "flat", defaultValue = "true") boolean flatRemove,
-                                      @RequestParam(name = "paswd", defaultValue = "") String password,
-                                      @RequestParam(name = "removeTargetDir", defaultValue = "false") boolean removeTargetDir
+    public Result<List<Result<Boolean>>> deleteFile(Authentication authentication,
+                                                    @RequestParam(name = "path", defaultValue = "/root") String[] paths,
+                                                    @RequestParam(name = "flat", defaultValue = "true") boolean flatRemove,
+                                                    @RequestParam(name = "paswd", defaultValue = "") String password,
+                                                    @RequestParam(name = "removeTargetDir", defaultValue = "false") boolean removeTargetDir
     ) {
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
-            User user = getAndInitUser(authentication, true, false);
+            User user = getAndInitUser(authentication, true);
 
             if (!encoder.matches(password, user.password)) return new Result<>("wrong password!");
-            if (path.equals("/root")) return new Result<>("can not remove /root dir");
 
             var rootItem = user.rootItem;
+            Stream<Result<Boolean>> result = Stream.of(paths).map(path ->
+            {
+                if (path.equals("/root")) return new Result<>("can not remove /root dir");
+                Item target;
+                try {
+                    target = rootItem.getTargetItem(path, true);
 
-            var target = rootItem.getTargetItem(path, true);
-            var subItems = target.transformSubItemsToList();
+                    var subItems = target.transformSubItemsToList();
 
-            subItemDeleter(subItems, flatRemove);
+                    subItemDeleter(subItems, flatRemove);
 
-            switch (target.getItemType()) {
-                case FILE: {
-                    deleteItem(target, flatRemove);
-                    userRepository.save(user);
-                    break;
+                    switch (target.getItemType()) {
+                        case FILE: {
+                            deleteItem(target, flatRemove);
+                            userRepository.save(user);
+                            break;
+                        }
+                        case DIR: {
+                            if (removeTargetDir)
+                                deleteItem(target, flatRemove);
+                            userRepository.save(user);
+                            break;
+                        }
+                        default:
+                            throw new UnknownItemTypeException("unknown item type");
+                    }
+                    logger.info(String.format("remove item of User<%s|%s> under path<%s> success | status<flat:%s; removeTargetDir:%s>",
+                            user.emailAddress, user.name, path, flatRemove, removeTargetDir));
+                    return new Result<>(true);
+                } catch (FileNotFoundException | RootPathNotExistException e) {
+                    return new Result<>(e.getMessage());
                 }
-                case DIR: {
-                    if (removeTargetDir)
-                        deleteItem(target, flatRemove);
-                    userRepository.save(user);
-                    break;
-                }
-                default:
-                    throw new UnknownItemTypeException("unknown item type");
-            }
-            logger.info(String.format("remove item of User<%s|%s> under path<%s> success | status<flat:%s; removeTargetDir:%s>",
-                    user.emailAddress, user.name, path, flatRemove, removeTargetDir));
-            return new Result<>(true);
-
-        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | UnknownItemTypeException e) {
+            });
+        return new Result<>(result.collect(Collectors.toList()));
+        } catch (UserNotFoundException | UnknownItemTypeException e) {
             logger.error(String.format("remove item of User<%s|> under path<%s> failure | status<flat:%s; removeTargetDir:%s>",
-                    authentication.getName(), path, flatRemove, removeTargetDir), e);
+                    authentication.getName(), List.of(paths), flatRemove, removeTargetDir), e);
 
             return new Result<>(e.getMessage());
         }
@@ -183,7 +192,7 @@ public class UserFileController {
                                      @RequestParam(name = "path", defaultValue = "/root") String path,
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
         try {
-            var user = getAndInitUser(authentication, true, false);
+            var user = getAndInitUser(authentication, true);
 
             appendNotExistItems(user, path, hidden, false);
             userRepository.save(user);
@@ -196,6 +205,7 @@ public class UserFileController {
             return new Result<>(false);
         }
     }
+
 
     @PostMapping(path = "/rename")
     public Result<String> fileRename(Authentication authentication,
@@ -215,24 +225,33 @@ public class UserFileController {
     }
 
     @PostMapping(path = "/file-status")
-    public Result<Boolean> fileStatusChange(
+    public Result<List<Result<Boolean>>> fileStatusChange(
             Authentication authentication,
-            @RequestParam(name = "path", defaultValue = "/root") String targetPath
+            @RequestParam(name = "path", defaultValue = "/root") String[] targetPaths
     ) {
         try {
-            var user = getAndInitUser(authentication, true, false);
-            var target = user.rootItem.getTargetItem(targetPath, true);
-            target.hidden = !target.hidden;
+            var user = getAndInitUser(authentication, true);
+            var result=Stream.of(targetPaths).map(targetPath->
+            {
+                Item target = null;
+                try {
+                    target = user.rootItem.getTargetItem(targetPath, true);
+                    target.hidden = !target.hidden;
+                    itemRepository.save(target);
+
+                    logger.info(String.format("change file status in path<%s> for User<%s|%s> success[hidden->%s]",
+                            targetPath, user.emailAddress, user.name, target.hidden));
+                    return new Result<>(true);
+                } catch (FileNotFoundException | RootPathNotExistException e) {
+                    return new Result<Boolean>(e.getMessage());
+                }
+            });
 
             userRepository.save(user);
-            itemRepository.save(target);
-
-            logger.info(String.format("change file status in path<%s> for User<%s|%s> success[hidden->%s]",
-                    targetPath, user.emailAddress, user.name, target.hidden));
-            return new Result<>(target.hidden);
-        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
+            return new Result<>(result.collect(Collectors.toList()));
+        } catch (UserNotFoundException e) {
             logger.error(String.format("change file status in path<%s> for User<%s> failure",
-                    targetPath, authentication.getName()), e);
+                    List.of(targetPaths), authentication.getName()), e);
             return new Result<>(e.getMessage());
         }
     }
@@ -277,16 +296,12 @@ public class UserFileController {
         logger.info(String.format("Exception remove file %d", sum));
     }
 
-    private User getAndInitUser(Authentication authentication, boolean withRemove) throws UserNotFoundException {
-        return getAndInitUser(authentication, false, withRemove);
-    }
-
     private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
-        return getAndInitUser(authentication, false, false);
+        return getAndInitUser(authentication, false);
     }
 
-    private User getAndInitUser(Authentication authentication, boolean withHidden, boolean withRemoved) throws UserNotFoundException {
-        User user = User.databaseUser(userRepository, authentication, withHidden, withRemoved);
+    private User getAndInitUser(Authentication authentication, boolean withHidden) throws UserNotFoundException {
+        User user = User.databaseUser(userRepository, authentication, withHidden, false);
 
         logger.info(String.format("organization User<%s|%s> data struct success!", user.emailAddress, user.name));
         return user;
