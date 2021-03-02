@@ -65,12 +65,12 @@ public class UserFileController {
 
 
         try {
-            var user = User.databaseUser(userRepository,authentication, withHidden,false);
+            var user = User.databaseUser(userRepository, authentication, withHidden, false);
             var item = user.rootItem.getTargetItem(path, withHidden);
 
             item.sortSubItems(sort, reverse);
 
-            logger.findSuccess(user, item,
+            logger.findSuccess(user, path, item,
                     Info.of(withHidden, "withHidden"),
                     Info.of(sort, "sortBy"),
                     Info.of(reverse, "Reverse"));
@@ -93,8 +93,8 @@ public class UserFileController {
                                       @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
-            var user = User.databaseUser(userRepository,authentication,
-                    true,false);
+            var user = User.databaseUser(userRepository, authentication,
+                    true, false);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
@@ -138,7 +138,7 @@ public class UserFileController {
 
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
-            User user = User.databaseUser(userRepository,authentication, true,false);
+            User user = User.databaseUser(userRepository, authentication, true, false);
 
             if (!encoder.matches(password, user.password)) return Result.failureResult("wrong password!");
 
@@ -211,7 +211,7 @@ public class UserFileController {
                                      @RequestParam(name = "path", defaultValue = "/root") String path,
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
         try {
-            var user = User.databaseUser(userRepository,authentication, true,false);
+            var user = User.databaseUser(userRepository, authentication, true, false);
 
             appendNotExistItems(user, path, hidden, false);
             userRepository.save(user);
@@ -255,8 +255,8 @@ public class UserFileController {
     ) {
         logger.dataAccept(Info.of(List.of(targetPaths), "TargetPathToChangeHiddenStatus"));
         try {
-            var user = User.databaseUser(userRepository,authentication,true,false);
-            Function<String,Result<Boolean>>operator=targetPath ->
+            var user = User.databaseUser(userRepository, authentication, true, false);
+            Function<String, Result<Boolean>> operator = targetPath ->
             {
                 Item target;
                 try {
@@ -267,7 +267,7 @@ public class UserFileController {
                     logger.fileOperateSuccess(user, "Change Status",
                             Info.of(targetPath, "targetPath"),
                             Info.of(target.hidden, "hiddenStatus"));
-                    return  Result.okResult(true);
+                    return Result.okResult(true);
                 } catch (FileNotFoundException | RootPathNotExistException e) {
                     logger.operateFailure("Change Status",
                             authentication,
@@ -280,9 +280,9 @@ public class UserFileController {
             userRepository.save(user);
             return Result.okResult(result.collect(Collectors.toList()));
         } catch (UserNotFoundException e) {
-            logger.operateFailure("Change File Hidden Status",e,authentication,
-                    Info.of(List.of(targetPaths),"paths"));
-            return  Result.failureResult(e);
+            logger.operateFailure("Change File Hidden Status", e, authentication,
+                    Info.of(List.of(targetPaths), "paths"));
+            return Result.failureResult(e);
         }
     }
 
@@ -292,7 +292,7 @@ public class UserFileController {
             @RequestParam(name = "path", defaultValue = "/root") String targetPath
     ) {
         try {
-            var user = User.databaseUser(userRepository,authentication,true,true);
+            var user = User.databaseUser(userRepository, authentication, true, true);
             var target = user.rootItem.getTargetItem(targetPath, true);
 
             target.setRemoved(false);
@@ -302,7 +302,7 @@ public class UserFileController {
             logger.fileOperateSuccess(user, "Restore File", Info.of(targetPath, "targetPath"));
             return Result.okResult(Boolean.TRUE);
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
-            logger.operateFailure("Restore File",authentication, Info.of(targetPath,"TargetPath"));
+            logger.operateFailure("Restore File", authentication, Info.of(targetPath, "TargetPath"));
             return Result.failureResult(e);
         }
     }
@@ -382,8 +382,7 @@ public class UserFileController {
                 item.setParentItem(lastItem);
                 user.addItem(item);
                 itemRepository.save(item);
-            }
-            else
+            } else
                 count++;
             lastItem = item;
         }

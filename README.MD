@@ -9,14 +9,14 @@
   * 参数列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :-----: | :-----: | :--: | :-----: | :------: |
-      | GET | null | null | 获得简陋登录界面 | 所有人| ```html``` |
+      | GET**removed** | null | null | 获得简陋登录界面 | 所有人| ```html``` |
       | POST | uid={*userEmailAddress*}&<br>paswd={*userPassword*}| uid->用户登录用邮箱;<br>paswd->用户登录密码| 登录<br>*进行用户认证*|所有人| ```Result<Boolean>``` |
 * ```/sign-up```
   * 用户注册接口
   * 参数列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
-      | GET | null | null | 获得简陋注冊界面 | 所有人| ```html``` |
+      | GET**removed** | null | null | 获得简陋注冊界面 | 所有人| ```html``` |
       | POST | uid={*userEmailAddress*}&<br>paswd={*userPassword*}&<br>name={*userName*}| uid->用户登录用邮箱（*唯一*）;<br>paswd->用户登录密码;<br>name->用戶名| 注冊為新用戶<br>*如果郵箱已經被注冊將注冊失敗*|所有人|```Result<Boolean>``` |
 * ```/sign-out```
   * 用戶登出
@@ -30,7 +30,7 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
-      | GET | null |null| 獲得簡單的更改密碼界面 | USER | ```html``` |
+      | GET**removed** | null |null| 獲得簡單的更改密碼界面 | USER | ```html``` |
       | POST | old={*userOldPassword*}&<br>new={*userNewPassword*}|old->原密碼;<br>new->新密碼 | 將原密碼更換為新密碼<br>**如果新舊密碼一致或者原密碼錯誤將無法更改**| USER |```Result<Boolean>``` |
 * ```/check-email```
   * 檢查郵箱是否已經被使用
@@ -49,7 +49,7 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
-      | GET | null | null | 获得简单的用户邮箱验证界面 | USER | ```html``` |
+      | GET**removed** | null | null | 获得简单的用户邮箱验证界面 | USER | ```html``` |
 
 * ```/user-find-password```
   * 测试用的用户找回密码页面
@@ -72,26 +72,26 @@
   * 參數列表
       | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
-      | GET | null |null| 獲得簡單的文件上傳界面 | USER | ```html``` |
+      | GET**removed** | null |null| 獲得簡單的文件上傳界面 | USER | ```html``` |
 * ```/headup```
   * 只供測試使用的用户头像上傳接口
   * 參數列表
       | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
-      | GET | null |null| 获得简单的用户头像上传界面 | USER | ```html``` |
+      | GET**removed** | null |null| 获得简单的用户头像上传界面 | USER | ```html``` |
 * ```/headImagePreview```
   * 只供測試使用的用户头像预览接口
   * 參數列表
       | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
-      | GET | null |null| 获得简单的用户头像预览界面 | USER | ```html``` |
+      | GET**removed** | null |null| 获得简单的用户头像预览界面 | USER | ```html``` |
 
 * ```/imgPreview/{filename:.+}```
   * 只供測試使用的圖片預覽接口
   * 參數列表
       | 方法 | 参数列表 | 参数描述 |功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |
-      | GET | \[路徑參數]filename | filename->要預覽的圖片名稱 | 預覽圖片 | USER | ```html``` |
+      | GET**removed** | \[路徑參數]filename | filename->要預覽的圖片名稱 | 預覽圖片 | USER | ```html``` |
 * ```/storage/{filename:.+}```
   * 原圖獲取接口
   * 參數列表

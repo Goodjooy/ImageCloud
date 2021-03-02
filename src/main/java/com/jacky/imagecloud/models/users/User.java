@@ -150,4 +150,9 @@ public class User {
         }
         seizedFiles.add(item);
     }
+
+    @Override
+    public String toString() {
+        return String.format("User<%s | %s>",name,emailAddress);
+    }
 }

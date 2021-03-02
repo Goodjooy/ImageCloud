@@ -8,7 +8,6 @@ import com.sun.istack.NotNull;
 import javax.persistence.*;
 import java.io.FileNotFoundException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,7 +35,7 @@ public class Item {
     private User user;
 
     @JsonIgnore
-    @OneToOne(mappedBy = "item",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "item", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private ItemTime time;
 
     @JsonIgnore
@@ -53,10 +52,12 @@ public class Item {
     public Boolean hidden;
 
     public Item() {
+        SubItems=new LinkedList<>();
     }
-    public static Item NewDefaultItem(){
-        Item item=DefaultItem();
-        item.time=ItemTime.nowCreateTime(item);
+
+    public static Item NewDefaultItem() {
+        Item item = DefaultItem();
+        item.time = ItemTime.nowCreateTime(item);
 
         return item;
     }
@@ -86,12 +87,12 @@ public class Item {
     public static Item FileItem(User user, Item dir, String filename, boolean hidden) {
         Item item = NewDefaultItem();
 
-        filename=URLDecoder.decode(filename, StandardCharsets.UTF_8);
+        filename = URLDecoder.decode(filename, StandardCharsets.UTF_8);
 
-        var sameNames=dir.getSameNameSubItem(filename,ItemType.FILE);
-        if(sameNames.size()>0){
-            var pos=filename.lastIndexOf(".");
-            filename=filename.substring(0,pos)+" #" +UUID.randomUUID().toString().substring(0,8)+filename.substring(pos);
+        var sameNames = dir.getSameNameSubItem(filename, ItemType.FILE);
+        if (sameNames.size() > 0) {
+            var pos = filename.lastIndexOf(".");
+            filename = filename.substring(0, pos) + " #" + UUID.randomUUID().toString().substring(0, 8) + filename.substring(pos);
         }
 
         item.setItemName(filename);
@@ -113,49 +114,50 @@ public class Item {
 
         return t;
     }
-    public List<String > getSameNameSubItem(String name,ItemType type){
+
+    public List<String> getSameNameSubItem(String name, ItemType type) {
         return SubItems.stream()
-                .filter(item -> item.itemName.equals(name)&&item.itemType==type)
+                .filter(item -> item.itemName.equals(name) && item.itemType == type)
                 .map(item -> item.itemName).sorted().collect(Collectors.toList());
 
     }
 
-    public void sortSubItems(ItemSort type,boolean reverse){
-        var dir=SubItems.stream().filter(item -> item.itemType==ItemType.DIR).collect(Collectors.toSet());
-        var file=SubItems.stream().filter(item -> item.itemType==ItemType.FILE).collect(Collectors.toSet());
+    public void sortSubItems(ItemSort type, boolean reverse) {
+        var dir = SubItems.stream().filter(item -> item.itemType == ItemType.DIR).collect(Collectors.toList());
+        var file = SubItems.stream().filter(item -> item.itemType == ItemType.FILE).collect(Collectors.toList());
         Comparator<Item> comparator;
-        switch (type){
-            case name:{
-                comparator=Comparator.comparing(item -> item.itemName);
+        switch (type) {
+            case name: {
+                comparator = Comparator.comparing(item -> item.itemName);
                 break;
             }
-            case modifyTime:{
-                    comparator=Comparator.comparing(item -> item.time.modifyTime);
-                    break;
+            case modifyTime: {
+                comparator = Comparator.comparing(item -> item.time.modifyTime);
+                break;
             }
             case createTime:
-            default:{
-                comparator=Comparator.comparing(item -> item.time.createTime);
+            default: {
+                comparator = Comparator.comparing(item -> item.time.createTime);
             }
         }
-        if(reverse){
-            comparator=comparator.reversed();
+        if (reverse) {
+            comparator = comparator.reversed();
         }
 
-        var sortedFile=file.stream().sorted(comparator).collect(Collectors.toList());
-        var sortedDir=dir.stream().sorted(comparator).collect(Collectors.toList());
+        var sortedFile = file.stream().sorted(comparator).collect(Collectors.toList());
+        var sortedDir = dir.stream().sorted(comparator).collect(Collectors.toList());
 
-        var temp=new LinkedList<Item>();
+        var temp = new LinkedList<Item>();
         temp.addAll(sortedFile);
         temp.addAll(sortedDir);
 
-        SubItems=temp;
+        SubItems = temp;
     }
 
     public HashMap<String, Item> findAllRemoveSubItem() {
         HashMap<String, Item> result = new HashMap<>();
         var items = SubItems.stream().filter(item -> item.removed
-        ).map((item) -> result.put(String.format("%s/%s",itemName,item.itemName), item)).collect(Collectors.toSet());
+        ).map((item) -> result.put(String.format("%s/%s", itemName, item.itemName), item)).collect(Collectors.toSet());
         var re = SubItems.stream().filter(item -> !item.removed).map(item -> {
             var temps = item.findAllRemoveSubItem();
             for (String key : temps.keySet()) {
@@ -222,11 +224,13 @@ public class Item {
         if (itemName.equals(path))
             targetItem = this;
 
-        for (Item subItem :
-                SubItems) {
-            if (subItem.itemName.equals(path)) {
-                targetItem = subItem;
-                break;
+        if (SubItems != null) {
+            for (Item subItem :
+                    SubItems) {
+                if (subItem.itemName.equals(path)) {
+                    targetItem = subItem;
+                    break;
+                }
             }
         }
         if (!withHidden && targetItem != null && targetItem.hidden) {
@@ -253,20 +257,20 @@ public class Item {
     }
 
     public void setRemoved(Boolean removed) {
-        if(time!=null)
+        if (time != null)
             time.deleted();
         this.removed = removed;
     }
 
     public void setParentItem(Item item) {
-        if(time!=null)
+        if (time != null)
             time.modified();
         parentID = item.getId();
 
     }
 
     public void setSameParentItem(Item sameParentItem) {
-        if(time!=null)
+        if (time != null)
             time.modified();
         parentID = sameParentItem.getParentID();
     }
@@ -284,7 +288,7 @@ public class Item {
     }
 
     public void setItemName(String itemName) {
-        if(time!=null)
+        if (time != null)
             time.modified();
         this.itemName = itemName;
     }

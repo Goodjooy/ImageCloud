@@ -47,7 +47,7 @@ public class MySQLUserDetailsService implements UserDetailsService {
             logger.authenticationSuccess(emailAddress, Info.of("Find in Database","operate"));
             return builder.build();
         }
-        logger.authenticationSuccess(emailAddress, Info.of("Not Find in Database","operate"));
+        logger.authenticationFailure(emailAddress, Info.of("Not Find in Database","operate"));
         throw new UsernameNotFoundException(emailAddress);
     }
 }

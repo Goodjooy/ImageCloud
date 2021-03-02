@@ -7,6 +7,7 @@ import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.data.VerifyCodeContainer;
 import com.jacky.imagecloud.email.EmailSender;
+import com.jacky.imagecloud.err.StorageException;
 import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserImage;
@@ -184,6 +185,12 @@ public class UserInformationController {
 
             return Result.failureResult(e);
         }
+    }
+
+    @ExceptionHandler(StorageException.class)
+    public ResponseEntity<?>handleException(StorageException e){
+        logger.operateFailure("Storage Server",e);
+        return ResponseEntity.notFound().build();
     }
 
 
