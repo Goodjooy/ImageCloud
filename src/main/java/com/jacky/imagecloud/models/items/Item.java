@@ -7,6 +7,9 @@ import com.sun.istack.NotNull;
 
 import javax.persistence.*;
 import java.io.FileNotFoundException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -82,6 +85,9 @@ public class Item {
 
     public static Item FileItem(User user, Item dir, String filename, boolean hidden) {
         Item item = NewDefaultItem();
+
+        filename=URLDecoder.decode(filename, StandardCharsets.UTF_8);
+
         var sameNames=dir.getSameNameSubItem(filename,ItemType.FILE);
         if(sameNames.size()>0){
             var pos=filename.lastIndexOf(".");

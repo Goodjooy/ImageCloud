@@ -62,35 +62,6 @@ public class SecurityController {
         lock.unlock();
     }
 
-
-    @GetMapping("/sign-in")
-    public String getSignInPage() {
-        return "sign_in";
-    }
-
-    @GetMapping("/sign-up")
-    public String getSignUpPage() {
-        return "sign-up";
-    }
-
-    @GetMapping("/reset-paswd")
-    public String resetPassword() {
-        return "reset-paswd";
-    }
-
-    @GetMapping("/user-verify")
-    public String userVerify(){
-        return "user-verify";
-    }
-    @GetMapping("/user-find-password")
-    public String  findPassword(
-            Model model,
-            @RequestParam(name = "email")String email
-    ){
-        model.addAttribute("email",email);
-        return "user-find-password";
-    }
-
     @GetMapping(path = "/find-password")
     @ResponseBody
     public Result<Boolean> sendVerifyCode(
@@ -106,7 +77,7 @@ public class SecurityController {
         userVerifies.put(emailAddress, code);
         lock.unlock();
 
-        sender.sendEmail("find password verify code", code.getCode(), false, emailAddress);
+        sender.sendPasswordFinderCode( code.getCode(), emailAddress);
         return new Result<>(true);
     }
 

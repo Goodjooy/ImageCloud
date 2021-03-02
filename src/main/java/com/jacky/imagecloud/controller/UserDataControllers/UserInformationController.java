@@ -2,6 +2,8 @@ package com.jacky.imagecloud.controller.UserDataControllers;
 
 import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
 import com.jacky.imagecloud.FileStorage.FileService.HeadImageStorageService;
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.data.VerifyCodeContainer;
 import com.jacky.imagecloud.email.EmailSender;
@@ -10,26 +12,27 @@ import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserImage;
 import com.jacky.imagecloud.models.users.UserInformation;
 import com.jacky.imagecloud.models.users.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
-import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.UUID;
+import javax.naming.AuthenticationNotSupportedException;
+import javax.persistence.criteria.CriteriaBuilder;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
 @RestController
 @Scope(value = "session")
 @RequestMapping("/user")
 public class UserInformationController {
-    Logger logger = LoggerFactory.getLogger(UserInformationController.class);
+    LoggerHandle logger = LoggerHandle.newLogger(UserInformationController.class);
 
     @Autowired
     UserRepository userRepository;
@@ -42,7 +45,7 @@ public class UserInformationController {
     @Autowired
     EmailSender emailSender;
 
-    ReentrantLock lock=new ReentrantLock();
+    ReentrantLock lock = new ReentrantLock();
     VerifyCodeContainer verifyCode;
 
     @GetMapping(path = "/base")
@@ -50,11 +53,12 @@ public class UserInformationController {
         try {
             User user = User.databaseUser(userRepository, authentication);
 
-            logger.info(String.format("load full User Info<%s|%s> success", user.emailAddress, user.name));
-            return new Result<>(user);
+            logger.userOperateSuccess(user, "Base Information");
+            return Result.okResult(user);
         } catch (Exception e) {
+            logger.userOperateFailure(authentication.getName(), "Base Information", e);
             logger.error(String.format("load User<%s> failure", authentication.getName()), e);
-            return new Result<>(e.getMessage());
+            return Result.failureResult(e);
         }
     }
 
@@ -64,11 +68,12 @@ public class UserInformationController {
             User user = User.databaseUser(userRepository, authentication);
             user.information.checkUsedSize(fileSystemStorageService);
             userRepository.save(user);
-            logger.info(String.format("load User extra Info<%s|%s> success", user.emailAddress, user.name));
-            return new Result<>(user.information);
+
+            logger.userOperateSuccess(user, "Extra Information");
+            return Result.okResult(user.information);
         } catch (UserNotFoundException e) {
-            logger.error(String.format("load User<%s> failure", authentication.getName()), e);
-            return new Result<>(e.getMessage());
+            logger.userOperateFailure(authentication.getName(), "Extra Information", e);
+            return Result.failureResult(e);
         }
     }
 
@@ -76,11 +81,12 @@ public class UserInformationController {
     public Result<UserImage> getUserImage(Authentication authentication) {
         try {
             User user = User.databaseUser(userRepository, authentication);
-            logger.info(String.format("load User Image Info<%s|%s> success", user.emailAddress, user.name));
-            return new Result<>(user.image);
+
+            logger.userOperateSuccess(user, "Image Information");
+            return Result.okResult(user.image);
         } catch (UserNotFoundException e) {
-            logger.error(String.format("load User<%s> failure", authentication.getName()), e);
-            return new Result<>(e.getMessage());
+            logger.userOperateFailure(authentication.getName(), "Image Information", e);
+            return Result.failureResult(e);
         }
     }
 
@@ -90,6 +96,8 @@ public class UserInformationController {
             @RequestParam(name = "file") MultipartFile file
     ) {
         try {
+            logger.dataAccept(Info.of(Objects.requireNonNull(file.getOriginalFilename()), "uploadedFile"));
+
             User user = User.databaseUser(userRepository, authentication);
             UserImage image;
             if (user.image.getSetHeaded())
@@ -100,12 +108,17 @@ public class UserInformationController {
             image.setUser(user);
 
             userRepository.save(user);
-            logger.info(String.format("success upload head image <%s> for user<%s>", file.getOriginalFilename(), user.emailAddress));
-            return new Result<>(true);
+
+            logger.userOperateSuccess(user, "Upload Head Image",
+                    Info.of(file.getOriginalFilename(), "Image Name"));
+            return Result.okResult(true);
         } catch (UserNotFoundException e) {
-            logger.error(String.format("fail upload head image <%s> for user<%s>", file.getOriginalFilename(), authentication.getName()
-            ), e);
-            return new Result<>(e.getLocalizedMessage());
+            logger.userOperateFailure(authentication.getName(),
+                    "Upload Head Image",
+                    e,
+                    Info.of(Objects.requireNonNull(file.getOriginalFilename()),
+                            "Image Name"));
+            return Result.failureResult(e);
         }
     }
 
@@ -115,48 +128,68 @@ public class UserInformationController {
             @PathVariable(name = "size") int size,
             @PathVariable(name = "filename") String filename
     ) {
-        Resource file = storageService.loadAsResource(filename, size);
-        logger.info(String.format("success find head image <%s> for user<%s> | size:%s", filename, authentication.getName(),size));
-        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(file);
+        logger.dataAccept(Info.of(size, "Head Image Size"));
+
+        User user = User.databaseUser(userRepository, authentication);
+        if (user.image.getFileName().equals(filename)) {
+            Resource file = storageService.loadAsResource(filename, size);
+
+            logger.userOperateSuccess(user,"Find Head Image",
+                    Info.of(filename,"ImageName"),
+                    Info.of(size,"ImageSize"));
+            return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
+                    "attachment; filename=\"" + filename + "\"").body(file);
+        }
+        else {
+            logger.userOperateFailure(authentication.getName(),"Find Head Image",
+                    Info.of(filename,"ImageName"),
+                    Info.of(size,"ImageSize"));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
     }
 
     @GetMapping(path = "/verify")
-    public Result<Boolean>userEmailVerify(
+    public Result<Boolean> userEmailVerify(
             Authentication authentication
-    ){
-        User user=User.databaseUser(userRepository,authentication);
+    ) {
+        logger.dataAccept(Info.of(authentication.getName(),"User For Verify"));
+
+        User user = User.databaseUser(userRepository, authentication);
         generateVerifyCode();
-        emailSender.sendVerifyCode(verifyCode.getCode(),user.emailAddress);
-        return new Result<>(Boolean.TRUE);
+        emailSender.sendVerifyCode(verifyCode.getCode(), user.emailAddress);
+        return Result.okResult(Boolean.TRUE);
     }
 
     @PostMapping(path = "/verify")
-    public Result<Boolean>verifyCodeCheck(
+    public Result<Boolean> verifyCodeCheck(
             Authentication authentication,
-            @RequestParam(name = "code")String verifyCode
-    ){
+            @RequestParam(name = "code") String verifyCode
+    ) {
         try {
+            logger.dataAccept(Info.of(verifyCode,"Verify code"));
+
             User user = User.databaseUser(userRepository, authentication);
             var status = this.verifyCode.match(verifyCode);
             if (status) {
                 user.information.verify = true;
                 userRepository.save(user);
 
-                logger.info(String.format("verify email of User<%s> success",user.emailAddress));
-                return new Result<>(true);
+                logger.userOperateSuccess(user,"Verify Email");
+                return Result.okResult(true);
             }
-            logger.info(String.format("verify email of User<%s> failure",user.emailAddress));
-            return new Result<>(false);
-        }catch (Exception e){
-            logger.info(String.format("verify email of User<%s> failure",authentication.getName()),e);
-            return new Result<>(e.getMessage());
+            logger.userOperateFailure(user.name, "Verify Email",Info.of("Bad Verify Code","Reason"));
+            return Result.failureResult("Bad Verify Code");
+        } catch (Exception e) {
+            logger.userOperateFailure(authentication.getName(),"Verify Email",e);
+
+            return Result.failureResult(e);
         }
     }
 
 
-    private void generateVerifyCode(){
+    private void generateVerifyCode() {
         lock.lock();
-        verifyCode=VerifyCodeContainer.newVerify();
+        verifyCode = VerifyCodeContainer.newVerify();
         lock.unlock();
     }
 }

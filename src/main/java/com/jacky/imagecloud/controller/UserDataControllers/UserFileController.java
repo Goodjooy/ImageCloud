@@ -1,7 +1,8 @@
 package com.jacky.imagecloud.controller.UserDataControllers;
 
 import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
-import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.RootPathNotExistException;
 import com.jacky.imagecloud.err.UnknownItemTypeException;
@@ -9,8 +10,6 @@ import com.jacky.imagecloud.err.UserNotFoundException;
 import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -23,6 +22,8 @@ import java.nio.file.FileAlreadyExistsException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,7 +44,7 @@ import java.util.stream.Stream;
  */
 @RestController
 public class UserFileController {
-    Logger logger = LoggerFactory.getLogger(UserFileController.class);
+    LoggerHandle logger = LoggerHandle.newLogger(UserFileController.class);
 
     @Autowired
     UserRepository userRepository;
@@ -61,19 +62,27 @@ public class UserFileController {
                                 @RequestParam(name = "withHidden", defaultValue = "false") boolean withHidden,
                                 @RequestParam(name = "sort", defaultValue = "name") ItemSort sort,
                                 @RequestParam(name = "reverse", defaultValue = "false") boolean reverse) {
+
+
         try {
-            var user = getAndInitUser(authentication, withHidden);
+            var user = User.databaseUser(userRepository,authentication, withHidden,false);
             var item = user.rootItem.getTargetItem(path, withHidden);
 
             item.sortSubItems(sort, reverse);
 
-            logger.info(String.format("load item of User<%s|%s> in path<%s> success status<withHidden:%s sort: %s reverse : %s>",
-                    user.emailAddress, user.name, path, withHidden, sort, reverse));
-            return new Result<>(item);
+            logger.findSuccess(user, item,
+                    Info.of(withHidden, "withHidden"),
+                    Info.of(sort, "sortBy"),
+                    Info.of(reverse, "Reverse"));
+            return Result.okResult(item);
         } catch (Exception e) {
-            logger.error(String.format("load item of User<%s> in path<%s> failure status<withHidden:%s sort: %s reverse : %s>",
-                    authentication.getName(), path, withHidden, sort, reverse), e);
-            return new Result<>(e.getMessage());
+            logger.operateFailure("Find Item Failure", e, authentication,
+                    Info.of(path, "Path"),
+                    Info.of(withHidden, "withHidden"),
+                    Info.of(sort, "sortBy"),
+                    Info.of(reverse, "Reverse"));
+
+            return Result.failureResult(e);
         }
     }
 
@@ -84,8 +93,8 @@ public class UserFileController {
                                       @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
-            var user = getAndInitUser(authentication,
-                    true);
+            var user = User.databaseUser(userRepository,authentication,
+                    true,false);
 
             if (user.information.availableSize() < file.getSize()) return new Result<>(
                     String.format("user space<%d|%d> not enough",
@@ -104,14 +113,16 @@ public class UserFileController {
             itemRepository.save(lastItem);
             userRepository.save(user);
 
-            logger.info(String.format("upload item of User<%s|%s> in path<%s> name<%s> size<%s> success status<hidden:%s>",
-                    user.emailAddress, user.name, path, file.getOriginalFilename(), FileUploader.formatSize(file.getSize()), hidden));
-            return new Result<>(true, false, "");
+            logger.uploadSuccess(user, file, path, Info.of(hidden, "hidden"));
+            return Result.okResult(true);
         } catch (Exception e) {
-            logger.error(String.format("upload item of User<%s> in path<%s> name<%s> failure status<hidden:%s>",
-                    authentication.getName(), path, file.isEmpty() ? "unknown" : file.getOriginalFilename(), hidden), e);
+            logger.operateFailure("Upload File Failure", e, authentication,
+                    Info.of(path, "Path"),
+                    Info.of(Objects.requireNonNull(file.getOriginalFilename()), "fileName"),
+                    Info.of(hidden, "hidden")
+            );
             fileOperateCheck();
-            return new Result<>(e.getMessage());
+            return Result.failureResult(e);
         }
     }
 
@@ -123,16 +134,18 @@ public class UserFileController {
                                                     @RequestParam(name = "paswd", defaultValue = "") String password,
                                                     @RequestParam(name = "removeTargetDir", defaultValue = "false") boolean removeTargetDir
     ) {
+        logger.dataAccept(Info.of(List.of(paths), "targetPaths"));
+
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
         try {
-            User user = getAndInitUser(authentication, true);
+            User user = User.databaseUser(userRepository,authentication, true,false);
 
-            if (!encoder.matches(password, user.password)) return new Result<>("wrong password!");
+            if (!encoder.matches(password, user.password)) return Result.failureResult("wrong password!");
 
             var rootItem = user.rootItem;
             Stream<Result<Boolean>> result = Stream.of(paths).map(path ->
             {
-                if (path.equals("/root")) return new Result<>("can not remove /root dir");
+                if (path.equals("/root")) return Result.failureResult("can not remove /root dir");
                 Item target;
                 try {
                     target = rootItem.getTargetItem(path, true);
@@ -141,34 +154,38 @@ public class UserFileController {
 
                     subItemDeleter(subItems, flatRemove);
 
-                    switch (target.getItemType()) {
-                        case FILE: {
+                    if (target.getItemType() == ItemType.FILE) {
+                        deleteItem(target, flatRemove);
+                        userRepository.save(user);
+                    } else if (target.getItemType() == ItemType.DIR) {
+                        if (removeTargetDir)
                             deleteItem(target, flatRemove);
-                            userRepository.save(user);
-                            break;
-                        }
-                        case DIR: {
-                            if (removeTargetDir)
-                                deleteItem(target, flatRemove);
-                            userRepository.save(user);
-                            break;
-                        }
-                        default:
-                            throw new UnknownItemTypeException("unknown item type");
+                        userRepository.save(user);
+                    } else {
+                        throw new UnknownItemTypeException("unknown item type");
                     }
-                    logger.info(String.format("remove item of User<%s|%s> under path<%s> success | status<flat:%s; removeTargetDir:%s>",
-                            user.emailAddress, user.name, path, flatRemove, removeTargetDir));
-                    return new Result<>(true);
+
+                    logger.deleteSuccess(user, path, target,
+                            Info.of(flatRemove, "flatRemove"),
+                            Info.of(removeTargetDir, "removeTargetDir"));
+
+                    return Result.okResult(true);
                 } catch (FileNotFoundException | RootPathNotExistException e) {
-                    return new Result<>(e.getMessage());
+                    logger.operateFailure("Remove One Item In All Item", e, authentication,
+                            Info.of(path, "targetPath"),
+                            Info.of(flatRemove, "flatRemove"),
+                            Info.of(removeTargetDir, "removeTargetDir"));
+                    return Result.failureResult(e);
                 }
             });
-        return new Result<>(result.collect(Collectors.toList()));
+            return new Result<>(result.collect(Collectors.toList()));
         } catch (UserNotFoundException | UnknownItemTypeException e) {
-            logger.error(String.format("remove item of User<%s|> under path<%s> failure | status<flat:%s; removeTargetDir:%s>",
-                    authentication.getName(), List.of(paths), flatRemove, removeTargetDir), e);
-
-            return new Result<>(e.getMessage());
+            logger.operateFailure("Remove Items", e,
+                    authentication,
+                    Info.of(List.of(paths), "TargetPaths"),
+                    Info.of(flatRemove, "flatRemove"),
+                    Info.of(removeTargetDir, "removeTargetDir"));
+            return Result.failureResult(e);
         }
 
     }
@@ -177,12 +194,14 @@ public class UserFileController {
     public Result<Map<String, Item>> getRemovedItems(Authentication authentication) {
         try {
             User user = User.databaseUser(userRepository, authentication);
+            var data = user.removedItems();
 
-            logger.info(String.format("load flat removed files success User<%s>", user.emailAddress));
-            return new Result<>(user.removedItems());
+            logger.findRemovedTreeSuccess(user, data);
+            return Result.okResult(data);
         } catch (UserNotFoundException e) {
-            logger.error(String.format("load flat removed files failure User<%s>", authentication.getName()), e);
-            return new Result<>(e.getMessage());
+            logger.operateFailure("Load Flat Remove File Tree", e,
+                    authentication);
+            return Result.failureResult(e);
         }
 
     }
@@ -192,17 +211,18 @@ public class UserFileController {
                                      @RequestParam(name = "path", defaultValue = "/root") String path,
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
         try {
-            var user = getAndInitUser(authentication, true);
+            var user = User.databaseUser(userRepository,authentication, true,false);
 
             appendNotExistItems(user, path, hidden, false);
             userRepository.save(user);
-            logger.info(String.format("User<%s|%s> Create path %s Success! | status<hidden:%s>",
-                    user.name, user.emailAddress, path, hidden));
+
+            logger.createSuccess(user, path, Info.of(hidden, "hidden"));
             return new Result<>(true);
         } catch (UserNotFoundException | RootPathNotExistException | FileAlreadyExistsException e) {
-            logger.error(String.format("User<%s> create dir %s failure | status<hidden:%s> | %s"
-                    , authentication.getName(), path, hidden, e.getLocalizedMessage()), e);
-            return new Result<>(false);
+            logger.operateFailure("Create Directory", e, authentication,
+                    Info.of(hidden, "hidden")
+            );
+            return Result.okResult(false);
         }
     }
 
@@ -216,12 +236,16 @@ public class UserFileController {
             temp.data.setItemName(newName);
             itemRepository.save(temp.data);
 
-            logger.info(String.format("user<%s> change file<%s> name to <%s>", authentication.getName()
-                    , oldFilePath, newName));
-            return new Result<>(newName, false, "");
+            logger.fileOperateSuccess(authentication.getName(), "Rename File",
+                    Info.of(oldFilePath, "oldName"),
+                    Info.of(newName, "newName"));
+            return Result.okResult(newName);
         }
-        logger.error(String.format("User<%s> change filename<%s> failure", authentication.getName(), oldFilePath));
-        return new Result<>(null, true, temp.message);
+        logger.operateFailure("Change File Name",
+                authentication,
+                Info.of(oldFilePath, "oldName"),
+                Info.of(newName, "newName"));
+        return Result.failureResult(temp.message);
     }
 
     @PostMapping(path = "/file-status")
@@ -229,30 +253,36 @@ public class UserFileController {
             Authentication authentication,
             @RequestParam(name = "path", defaultValue = "/root") String[] targetPaths
     ) {
+        logger.dataAccept(Info.of(List.of(targetPaths), "TargetPathToChangeHiddenStatus"));
         try {
-            var user = getAndInitUser(authentication, true);
-            var result=Stream.of(targetPaths).map(targetPath->
+            var user = User.databaseUser(userRepository,authentication,true,false);
+            Function<String,Result<Boolean>>operator=targetPath ->
             {
-                Item target = null;
+                Item target;
                 try {
                     target = user.rootItem.getTargetItem(targetPath, true);
                     target.hidden = !target.hidden;
                     itemRepository.save(target);
 
-                    logger.info(String.format("change file status in path<%s> for User<%s|%s> success[hidden->%s]",
-                            targetPath, user.emailAddress, user.name, target.hidden));
-                    return new Result<>(true);
+                    logger.fileOperateSuccess(user, "Change Status",
+                            Info.of(targetPath, "targetPath"),
+                            Info.of(target.hidden, "hiddenStatus"));
+                    return  Result.okResult(true);
                 } catch (FileNotFoundException | RootPathNotExistException e) {
-                    return new Result<Boolean>(e.getMessage());
+                    logger.operateFailure("Change Status",
+                            authentication,
+                            Info.of(targetPath, "targetPath"));
+                    return Result.failureResult(e);
                 }
-            });
+            };
+            var result = Stream.of(targetPaths).map(operator);
 
             userRepository.save(user);
-            return new Result<>(result.collect(Collectors.toList()));
+            return Result.okResult(result.collect(Collectors.toList()));
         } catch (UserNotFoundException e) {
-            logger.error(String.format("change file status in path<%s> for User<%s> failure",
-                    List.of(targetPaths), authentication.getName()), e);
-            return new Result<>(e.getMessage());
+            logger.operateFailure("Change File Hidden Status",e,authentication,
+                    Info.of(List.of(targetPaths),"paths"));
+            return  Result.failureResult(e);
         }
     }
 
@@ -262,21 +292,19 @@ public class UserFileController {
             @RequestParam(name = "path", defaultValue = "/root") String targetPath
     ) {
         try {
-            var user = getAndInitUser(authentication);
-            user.constructItem(true, true);
+            var user = User.databaseUser(userRepository,authentication,true,true);
             var target = user.rootItem.getTargetItem(targetPath, true);
 
             target.setRemoved(false);
             userRepository.save(user);
             itemRepository.save(target);
 
-            logger.info(String.format("restore file <%s> for user<%s> success", targetPath, user.emailAddress));
-            return new Result<>(Boolean.TRUE);
+            logger.fileOperateSuccess(user, "Restore File", Info.of(targetPath, "targetPath"));
+            return Result.okResult(Boolean.TRUE);
         } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
-            logger.info(String.format("restore file <%s> for user<%s> failure", targetPath, authentication.getName()), e);
-            return new Result<>(e.getMessage());
+            logger.operateFailure("Restore File",authentication, Info.of(targetPath,"TargetPath"));
+            return Result.failureResult(e);
         }
-
     }
 
     /**
@@ -293,20 +321,9 @@ public class UserFileController {
         //remove
         var fileSizes = RawRemove.map(path -> fileUploader.delete(path.getFileName().toString()));
         var sum = fileSizes.reduce(0L, Long::sum);
-        logger.info(String.format("Exception remove file %d", sum));
+        logger.fileOperateSuccess("ALL-USER", "Remove Failure File", Info.of(sum, "Remove file count"));
     }
 
-    private User getAndInitUser(Authentication authentication) throws UserNotFoundException {
-        return getAndInitUser(authentication, false);
-    }
-
-    private User getAndInitUser(Authentication authentication, boolean withHidden) throws UserNotFoundException {
-        User user = User.databaseUser(userRepository, authentication, withHidden, false);
-
-        logger.info(String.format("organization User<%s|%s> data struct success!", user.emailAddress, user.name));
-        return user;
-
-    }
 
     private LinkedList<Item> GetItemTree(String path, Item root, boolean hidden) throws RootPathNotExistException {
         var items = new LinkedList<Item>();
@@ -348,7 +365,6 @@ public class UserFileController {
         }
         item.setRemoved(true);
         itemRepository.save(item);
-        logger.info(String.format("Remove file success<%s> [totally]", item.getItemName()));
     }
 
     private Item appendNotExistItems(User user,
@@ -366,8 +382,9 @@ public class UserFileController {
                 item.setParentItem(lastItem);
                 user.addItem(item);
                 itemRepository.save(item);
-                count++;
             }
+            else
+                count++;
             lastItem = item;
         }
         if (count == items.size() && !fileSave) {
