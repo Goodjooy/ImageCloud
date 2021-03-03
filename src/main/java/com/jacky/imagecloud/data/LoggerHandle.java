@@ -1,6 +1,8 @@
 package com.jacky.imagecloud.data;
 
 import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
+import com.jacky.imagecloud.err.BaseException;
+import com.jacky.imagecloud.err.BaseRuntimeException;
 import com.jacky.imagecloud.models.items.Item;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
@@ -31,14 +33,18 @@ public class LoggerHandle {
         logger.info(s);
     }
 
-    public void error(@NotNull String format, Object... objects) {
-        var s = String.format(format, objects);
-        logger.error(s);
-    }
-
     public void error(Throwable e, @NotNull String format, Object... objects) {
         var s = String.format(format, objects);
         logger.error(s, e);
+    }
+
+    public void error(String message, Throwable e) {
+        if(e==null)
+            logger.error(message);
+        if (e instanceof BaseException || e instanceof BaseRuntimeException) {
+            logger.error(message + "| Exception<" + e.getClass().getName() + ">: " + e.getMessage());
+        } else
+            logger.error(message, e);
     }
 
     public void dataAccept(Info<?> info) {
@@ -76,9 +82,9 @@ public class LoggerHandle {
         logger.info(information);
     }
 
-    public void findSuccess(User user,String path, Item targetItem, Info<?>... infoList) {
+    public void findSuccess(User user, String path, Item targetItem, Info<?>... infoList) {
         var information = String.format(
-                "`Find Item` Success ! | Path<%s> | Item<name: %s | type: %s | hidden: %s> | User<%s | %s> |%s",path,
+                "`Find Item` Success ! | Path<%s> | Item<name: %s | type: %s | hidden: %s> | User<%s | %s> |%s", path,
                 targetItem.getItemName(), targetItem.getItemType(), targetItem.hidden,
                 user.name, user.emailAddress, extraInformation(infoList)
         );
@@ -125,31 +131,53 @@ public class LoggerHandle {
     //user Information
     public void userOperateSuccess(User user, String messageName, Info<?>... extraInfo) {
         logger.info(String.format(
-                "Load User Information Success | User<%s | %s>| InformationType<%s> |%s",
-                user.name, user.emailAddress, messageName, extraInformation(extraInfo)
+                "`Load User Information` Success | InformationType<%s> | User<%s | %s> |%s",
+                messageName, user.name, user.emailAddress, extraInformation(extraInfo)
+        ));
+
+    }
+
+    public void userOperateSuccess(String user, String messageName, Info<?>... extraInfo) {
+        logger.info(String.format(
+                "`Load User Information` Success | InformationType<%s> | User<%s> |%s",
+                messageName, user, extraInformation(extraInfo)
         ));
 
     }
 
     public void userOperateFailure(String user, String messageName, Throwable throwable, Info<?>... extraInfo) {
-        logger.info(String.format(
-                "Load User Information Success | User<%s>| InformationType<%s> |%s",
-                user, messageName, extraInformation(extraInfo)
+        error(String.format(
+                "`Load User Information` Failure | InformationType<%s> | User<%s> |%s",
+                messageName, user, extraInformation(extraInfo)
         ), throwable);
     }
 
     public void userOperateFailure(String user, String messageName, Info<?>... extraInfo) {
+        error(String.format(
+                "`Load User Information` Failure | InformationType<%s> | User<%s> |%s",
+                messageName, user, extraInformation(extraInfo)
+        ), null);
+    }
+
+    public void storageFileOperateSuccess(String filename, String action, Info<?>... extraInfo) {
         logger.info(String.format(
-                "Load User Information Success | User<%s>| InformationType<%s> |%s",
-                user, messageName, extraInformation(extraInfo)
+                "`%s Storage File` Success | filename: %s |%s"
+                , action, filename, extraInformation(extraInfo)
         ));
     }
 
-    public void fileOperateSuccess(String filename) {//TODO: 文件操作成功日志
+    public void storageFileOperateFailure(String filename, String action, Throwable throwable, Info<?>... extraInfo) {
+        error(String.format(
+                "`%s Storage File` Failure | filename: %s |%s"
+                , action, filename, extraInformation(extraInfo)
+        ), throwable);
     }
 
-    public void fileOperateFailure(String filename) {
-        //TODO: 文件操作失败日志
+    public void storageFileOperateFailure(Throwable throwable, Info<?>... extraInfo) {
+        error(String.format(
+                "`Operation Storage File` Failure |%s"
+                , extraInformation(extraInfo)
+        ), throwable);
     }
 
     public void authenticationSuccess(String username, Info<?>... extraInfo) {
@@ -160,37 +188,50 @@ public class LoggerHandle {
     }
 
     public void authenticationFailure(String username, Throwable throwable, Info<?>... extraInfo) {
-        logger.error(String.format(
+        error(String.format(
                 "`User Authentication Operation` Failure | User<%s> |%s",
                 username, extraInformation(extraInfo)
         ), throwable);
     }
 
     public void authenticationFailure(String username, Info<?>... extraInfo) {
-        logger.error(String.format(
+        error(String.format(
                 "`User Authentication Operation` Failure | User<%s> |%s",
                 username, extraInformation(extraInfo)
+        ), null);
+    }
+
+    public void securityOperateSuccess(String operate, Info<?>... extraInfo) {
+        logger.info(String.format(
+                "`%s | Security` Success |%s",
+                operate, extraInformation(extraInfo)
         ));
     }
 
+    public void securityOperateFailure(String operate, Throwable throwable, Info<?>... extraInfo) {
+        error(String.format(
+                "`%s | Security` Failure |%s",
+                operate, extraInformation(extraInfo)
+        ), throwable);
+    }
 
     public void operateFailure(String description, Info<?>... infoList) {
-        logger.error(String.format("`%s` Failure|%s", description, extraInformation(infoList)));
+        error(String.format("`%s` Failure|%s", description, extraInformation(infoList)), null);
     }
 
     public void operateFailure(String description, Exception exception, Info<?>... infoList) {
-        logger.error(String.format("`%s` Failure|%s", description, extraInformation(infoList)), exception);
+        error(String.format("`%s` Failure|%s", description, extraInformation(infoList)), exception);
     }
 
     public void operateFailure(String description, Exception exception, Authentication authentication, Info<?>... infoList) {
-        logger.error(String.format("`%s` Failure |User<%s> |%s", description, authentication.getName(), extraInformation(infoList)), exception);
+        error(String.format("`%s` Failure |User<%s> |%s", description, authentication.getName(), extraInformation(infoList)), exception);
     }
 
     public void operateFailure(String description, Authentication authentication, Info<?>... infoList) {
-        logger.error(String.format("`%s` Failure |User<%s> |%s", description, authentication.getName(), extraInformation(infoList)));
+        error(String.format("`%s` Failure |User<%s> |%s", description, authentication.getName(), extraInformation(infoList)), null);
     }
 
     public void error(Throwable exception) {
-        logger.error(exception.getMessage(), exception);
+        error(exception.getMessage(), exception);
     }
 }

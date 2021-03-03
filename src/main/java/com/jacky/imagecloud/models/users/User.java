@@ -1,7 +1,7 @@
 package com.jacky.imagecloud.models.users;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.jacky.imagecloud.err.UserNotFoundException;
+import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.models.items.Item;
 import org.springframework.data.domain.Example;
 import org.springframework.security.core.Authentication;
@@ -71,7 +71,7 @@ public class User {
     }
 
     public static User databaseUser(UserRepository repository,
-                                    String emailAddress) {
+                                    String emailAddress) throws UserNotFoundException {
         User user = authUser(emailAddress);
         var result = repository.findOne(Example.of(user));
         if (result.isPresent()) {
@@ -99,7 +99,7 @@ public class User {
         return user;
     }
 
-    public static boolean verifiedUser(UserRepository repository, String emailAddress) {
+    public static boolean verifiedUser(UserRepository repository, String emailAddress) throws UserNotFoundException {
         User user = databaseUser(repository,emailAddress);
         return user.information.verify;
     }

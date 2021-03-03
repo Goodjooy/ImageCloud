@@ -1,13 +1,13 @@
 package com.jacky.imagecloud.controller;
 
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.data.VerifyCodeContainer;
 import com.jacky.imagecloud.email.EmailSender;
-import com.jacky.imagecloud.err.UserNotFoundException;
+import com.jacky.imagecloud.err.user.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -19,11 +19,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @Controller
 @Scope(value = ConfigurableBeanFactory.SCOPE_SINGLETON)
 public class SecurityController {
-    private final Logger logger = LoggerFactory.getLogger(SecurityController.class);
+    private final LoggerHandle logger = LoggerHandle.newLogger(SecurityController.class);
     private final Pattern emailPattern = Pattern.compile("^([a-zA-Z0-9]+([-|.])?)+@([a-zA-Z0-9]+(-[a-zA-Z0-9]+)?\\.)+[a-zA-Z]{2,}$");
 
     PasswordEncoder encoder = new BCryptPasswordEncoder();
@@ -48,18 +48,29 @@ public class SecurityController {
     private final Map<String, VerifyCodeContainer> userVerifies = new HashMap<>();
     private final ReentrantLock lock = new ReentrantLock();
 
-    @Scheduled(fixedDelay = 15000)
+    @Scheduled(fixedDelay = 30000)
     public void checkVerifyCode() {
-        if (userVerifies.size()==0)return;
+        if (userVerifies.size() == 0) return;
         lock.lock();
-        logger.info("start check deactivate code");
         var removeKeys = userVerifies.keySet().stream().filter(s -> !userVerifies.get(s).isActivate());
         for (String key :
                 removeKeys.collect(Collectors.toSet())) {
             userVerifies.remove(key);
         }
-        logger.info("end check deactivate code");
         lock.unlock();
+
+        logger.securityOperateSuccess("Check Verify Codes Status");
+    }
+
+    @GetMapping("/session-status")
+    @ResponseBody
+    public Result<Boolean> SessionStatus(Authentication authentication) {
+
+        logger.securityOperateSuccess("Get User Authentication Status");
+        if (authentication == null)
+            return Result.okResult(false);
+        else
+            return Result.okResult(authentication.isAuthenticated());
     }
 
     @GetMapping(path = "/find-password")
@@ -67,27 +78,30 @@ public class SecurityController {
     public Result<Boolean> sendVerifyCode(
             @RequestParam(name = "email") String emailAddress
     ) {
-        boolean isVerified = User.verifiedUser(userRepository, emailAddress);
-        if (!isVerified) {
-            return new Result<>(String.format("Not Verify User<%s>", emailAddress));
+
+        try {
+
+            boolean isVerified = User.verifiedUser(userRepository, emailAddress);
+            if (!isVerified)
+                throw new UserNotVerifiedException(emailAddress);
+            var old = userVerifies.get(emailAddress);
+            var now=LocalDateTime.now();
+            if (old != null && old.noNeedNewGenerate(now))
+                throw new NotEnoughTimeBetweenDifferentVerifyCodeGenerationException(old.deltaTime(now));
+
+            var code = VerifyCodeContainer.newVerify();
+            lock.lock();
+            userVerifies.put(emailAddress, code);
+            lock.unlock();
+
+            sender.sendPasswordFinderCode(code.getCode(), emailAddress);
+
+            logger.securityOperateSuccess("Send Find Password Verify Email", Info.of(emailAddress, "Target Email"));
+            return Result.okResult(true);
+        } catch (UserNotVerifiedException | NotEnoughTimeBetweenDifferentVerifyCodeGenerationException | UserNotFoundException e) {
+            logger.securityOperateFailure("Send Find Password Verify Email", e, Info.of(emailAddress, "Target Email"));
+            return Result.failureResult(e);
         }
-
-        var code = VerifyCodeContainer.newVerify();
-        lock.lock();
-        userVerifies.put(emailAddress, code);
-        lock.unlock();
-
-        sender.sendPasswordFinderCode( code.getCode(), emailAddress);
-        return new Result<>(true);
-    }
-
-    @GetMapping("/session-status")
-    @ResponseBody
-    public Result<Boolean> SessionStatus(Authentication authentication) {
-        if (authentication == null)
-            return new Result<>(false);
-        else
-            return new Result<>(authentication.isAuthenticated());
     }
 
 
@@ -101,25 +115,33 @@ public class SecurityController {
         lock.lock();
         var code = userVerifies.get(emailAddress);
         lock.unlock();
-        if (code.match(verifyCode)) {
-            User user = User.authUser(emailAddress);
-            var result = userRepository.findOne(Example.of(user));
-            if (result.isPresent()) {
-                user = result.get();
-                if (!encoder.matches(newPassword, user.password) && user.information.verify) {
-                    user.password = encoder.encode(newPassword);
-                    userRepository.save(user);
+        try {
 
-                    logger.info(String.format("success find back user<%s> [%s]",user.emailAddress,newPassword));
-                    return new Result<>(true);
-                }
-            }
+            User user = User.databaseUser(userRepository, emailAddress);
+
+            if (code == null)
+                throw new VerifyFailureException(verifyCode, "Verify code send User Not found");
+            if (!code.match(verifyCode))
+                throw new VerifyFailureException(verifyCode);
+            if (encoder.matches(newPassword, user.password))
+                throw new SamePasswordException();
+            if (!user.information.verify)
+                throw new UserNotVerifiedException(user.emailAddress);
+
+            lock.lock();
+            userVerifies.remove(emailAddress);
+            lock.unlock();
+
+            user.password = encoder.encode(newPassword);
+            userRepository.save(user);
+
+            logger.securityOperateSuccess("Find Back User Password", Info.of(user.emailAddress, "User")
+                    , Info.of(newPassword, "new Password"));
+            return Result.okResult(true);
+        } catch (VerifyFailureException | UserNotFoundException | SamePasswordException | UserNotVerifiedException e) {
+            logger.securityOperateFailure("Find Back User Password", e, Info.of(emailAddress, "User"));
+            return Result.failureResult(e);
         }
-        lock.lock();
-        userVerifies.remove(emailAddress);
-        lock.unlock();
-        logger.info(String.format("failure find back user<%s> password",emailAddress));
-        return new Result<>("failure to find back password of USER " + emailAddress);
     }
 
     @PostMapping("/check-email")
@@ -127,19 +149,21 @@ public class SecurityController {
     public Result<Boolean> CheckEmailExist(
             @RequestParam(name = "email") String emailAddress
     ) {
-        var matcher = emailPattern.matcher(emailAddress);
-        if (!matcher.matches()) {
-            return new Result<>("bad email address");
+        try {
+            var matcher = emailPattern.matcher(emailAddress);
+            if (!matcher.matches())
+                throw new EmailAddressNotSupportException(emailAddress, "Bad Email Pattern");
+            User user = User.authUser(emailAddress);
+            var result = userRepository.findAll(Example.of(user));
+            if (!result.isEmpty())
+                throw new EmailAddressNotSupportException(emailAddress, "Email Was Used");
+
+            logger.securityOperateSuccess("Check Email", Info.of(emailAddress, "Email"));
+            return Result.okResult(true);
+        } catch (EmailAddressNotSupportException e) {
+            logger.securityOperateFailure("Check Email", e, Info.of(emailAddress, "Email"));
+            return Result.failureResult(e);
         }
-        User user = new User();
-        user.emailAddress = (emailAddress);
-        var result = userRepository.findAll(Example.of(user));
-        if (result.isEmpty()) {
-            logger.info(String.format("Check email: Email<%s> is available", emailAddress));
-            return new Result<>(true);
-        }
-        logger.info(String.format("Check email: Email<%s> was exists", emailAddress));
-        return new Result<>(false, false, "email is exist");
     }
 
     @PostMapping(path = "/sign-up")
@@ -149,46 +173,31 @@ public class SecurityController {
             @RequestParam(name = "name") String name,
             @RequestParam(name = "paswd") String passWord
     ) {
-        var check = CheckEmailExist(emailAddress);
-        if (check.err) {
-            return new Result<>(check.message);
-        }
-        if (passWord.length() < 6 || passWord.length() > 32)
-            return new Result<>("password length out of size [6,32]");
-        if (name.length() > 16 || name.length() == 0)
-            return new Result<>("user `name` length out of size [1,16]");
         try {
+            var check = CheckEmailExist(emailAddress);
+            if (check.err)
+                throw new EmailAddressNotSupportException(emailAddress, check.e);
+            if (passWord.length() < 6 || passWord.length() > 32)
+                throw new BadNewUserInformationException("Password Length Out Of Range [6, 32]");
+            if (name.length() > 16 || name.length() == 0)
+                throw new BadNewUserInformationException("User Name Length Out Of Range [1,16]");
+
             User user = User.newUser(name, encoder.encode(passWord), emailAddress);
             userRepository.save(user);
 
-            logger.info(String.format("sign up new user->[email:%s][name:%s][rawPassword:%s]", emailAddress,
-                    name, passWord));
-            return new Result<>(true);
-
-        } catch (Exception e) {
-            logger.error("failure to sign up new user :-(", e);
-            return new Result<>(e.getMessage());
+            logger.securityOperateSuccess("Sign Up New User",
+                    Info.of(emailAddress, "UserEmail"),
+                    Info.of(name, "UserName"),
+                    Info.of(passWord, "RawPassword"));
+            return Result.okResult(true);
+        } catch (EmailAddressNotSupportException | BadNewUserInformationException e) {
+            logger.securityOperateFailure("Sign Up New User", e,
+                    Info.of(emailAddress, "UserEmail"),
+                    Info.of(name, "UserName"),
+                    Info.of(passWord, "RawPassword"));
+            return Result.failureResult(e);
         }
     }
-
-    @PostMapping(path = "/verify-email")
-    public String verifyEmail(
-            @RequestParam(name = "uid") String emailAddress,
-            @RequestParam(name = "paswd") String password,
-            Model model
-    ) {
-        User user = User.authUser(emailAddress);
-        var users = userRepository.findAll(Example.of(user));
-        var result = users.stream().filter(user1 -> encoder.matches(password, user1.password));
-        model.addAttribute("user", user);
-        if (result.toArray().length == 1) {
-            model.addAttribute("status", true);
-        } else {
-            model.addAttribute("status", false);
-        }
-        return "verify-done";
-    }
-
 
     @PostMapping(value = "/reset-paswd")
     @ResponseBody
@@ -201,33 +210,30 @@ public class SecurityController {
     ) {
         try {
             //check user
-            User user = new User();
-            user.emailAddress = (authentication.getName());
+            User user = User.databaseUser(userRepository, authentication);
+            if (!encoder.matches(oldPassword, user.password))
+                throw new ResetPasswordFailureException("Bad Old Password");
+            if (oldPassword.equals(newPassword))
+                throw new SamePasswordException();
 
-            var result = userRepository.findOne(Example.of(user));
-            if (result.isPresent()) {
-                user = result.get();
+            user.password = (encoder.encode(newPassword));
+            userRepository.save(user);
+            new SecurityContextLogoutHandler().logout(request, response, authentication);
 
-                if (encoder.matches(oldPassword, user.password) && !oldPassword.equals(newPassword)) {
-                    user.password = (encoder.encode(newPassword));
-                    userRepository.save(user);
-                    logger.info(String.format("User<%s> change password success,new password<%s> ,auto logout", user.name, newPassword));
-                    new SecurityContextLogoutHandler().logout(request, response, authentication);
-                    return new Result<>(Boolean.TRUE);
-                }
-                logger.info(String.format("User<%s> change password failure,wrong old password or same new password and old password", user.name));
-                return new Result<>(String.format("User<%s> change password failure,wrong old password or same new password and old password", user.name));
-            }
-            throw new UserNotFoundException(String.format("User<%s> not found", authentication.getName()));
+            logger.securityOperateSuccess("Reset User Password",
+                    Info.of(user,"User"),
+                    Info.of(newPassword,"NewPassword"));
+            return Result.okResult(Boolean.TRUE);
         } catch (Exception e) {
-            logger.error(String.format("fail to update the password of User<%s>", authentication.getName()), e);
+            logger.securityOperateFailure("Reset User Password", e,Info.of(authentication.getName(),
+                    "User"),Info.of(newPassword,"NewPassword"));
             return new Result<>(e.getMessage());
         }
     }
 
     @ExceptionHandler(value = NullPointerException.class)
     @ResponseBody
-    public ResponseEntity<?>nullPointerHandle(Exception e){
+    public ResponseEntity<?> nullPointerHandle(Exception e) {
         return ResponseEntity.notFound().build();
     }
 

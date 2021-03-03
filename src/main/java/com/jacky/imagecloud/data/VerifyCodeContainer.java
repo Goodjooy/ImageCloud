@@ -1,6 +1,10 @@
 package com.jacky.imagecloud.data;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAmount;
+import java.time.temporal.TemporalUnit;
 import java.util.UUID;
 
 public class VerifyCodeContainer {
@@ -41,6 +45,15 @@ public class VerifyCodeContainer {
         var nowTime = LocalDateTime.now();
         activate = createTime.plusMinutes(activateTime).isAfter(nowTime);
         return activate;
+    }
+
+    public boolean noNeedNewGenerate(LocalDateTime now){
+        return !createTime.plusSeconds(60).isBefore(now);
+    }
+
+    public long deltaTime(LocalDateTime now){
+        Duration duration=Duration.between(createTime,now);
+        return duration.toSeconds();
     }
 
 }

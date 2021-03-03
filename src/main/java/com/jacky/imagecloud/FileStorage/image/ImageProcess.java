@@ -1,6 +1,6 @@
 package com.jacky.imagecloud.FileStorage.image;
 
-import com.jacky.imagecloud.err.FileFormatNotSupportException;
+import com.jacky.imagecloud.err.file.FileFormatNotSupportException;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;

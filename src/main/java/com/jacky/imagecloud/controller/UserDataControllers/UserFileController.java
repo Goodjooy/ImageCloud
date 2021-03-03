@@ -4,9 +4,12 @@ import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
 import com.jacky.imagecloud.data.Info;
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
-import com.jacky.imagecloud.err.RootPathNotExistException;
-import com.jacky.imagecloud.err.UnknownItemTypeException;
-import com.jacky.imagecloud.err.UserNotFoundException;
+import com.jacky.imagecloud.err.file.EmptyFileException;
+import com.jacky.imagecloud.err.item.ItemNotFoundException;
+import com.jacky.imagecloud.err.item.RootPathNotExistException;
+import com.jacky.imagecloud.err.item.UnknownItemTypeException;
+import com.jacky.imagecloud.err.user.UserNotFoundException;
+import com.jacky.imagecloud.err.user.UserSpaceNotEnoughException;
 import com.jacky.imagecloud.models.items.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
@@ -60,7 +63,7 @@ public class UserFileController {
     public Result<Item> getFile(Authentication authentication,
                                 @RequestParam(name = "path", defaultValue = "root") String path,
                                 @RequestParam(name = "withHidden", defaultValue = "false") boolean withHidden,
-                                @RequestParam(name = "sort", defaultValue = "name") ItemSort sort,
+                                @RequestParam(name = "sort", defaultValue = "off") ItemSort sort,
                                 @RequestParam(name = "reverse", defaultValue = "false") boolean reverse) {
 
 
@@ -76,7 +79,7 @@ public class UserFileController {
                     Info.of(reverse, "Reverse"));
             return Result.okResult(item);
         } catch (Exception e) {
-            logger.operateFailure("Find Item Failure", e, authentication,
+            logger.operateFailure("Find Item", e, authentication,
                     Info.of(path, "Path"),
                     Info.of(withHidden, "withHidden"),
                     Info.of(sort, "sortBy"),
@@ -96,10 +99,11 @@ public class UserFileController {
             var user = User.databaseUser(userRepository, authentication,
                     true, false);
 
-            if (user.information.availableSize() < file.getSize()) return new Result<>(
-                    String.format("user space<%d|%d> not enough",
-                            user.information.availableSize(), file.getSize()));
-            if (file.isEmpty()) return new Result<>("empty file");
+            if (user.information.availableSize() < file.getSize())
+                throw new UserSpaceNotEnoughException(user.information.availableSize(), file.getSize());
+            if (file.isEmpty())
+                throw new EmptyFileException(file);
+
             Item last = appendNotExistItems(user, path, hidden, true);
             var lastItem = Item.FileItem(user, last, file.getOriginalFilename(), hidden);
             var fileStorage = fileUploader.storage(file);
@@ -170,7 +174,7 @@ public class UserFileController {
                             Info.of(removeTargetDir, "removeTargetDir"));
 
                     return Result.okResult(true);
-                } catch (FileNotFoundException | RootPathNotExistException e) {
+                } catch (FileNotFoundException | RootPathNotExistException | UnknownItemTypeException | ItemNotFoundException e) {
                     logger.operateFailure("Remove One Item In All Item", e, authentication,
                             Info.of(path, "targetPath"),
                             Info.of(flatRemove, "flatRemove"),
@@ -179,7 +183,7 @@ public class UserFileController {
                 }
             });
             return new Result<>(result.collect(Collectors.toList()));
-        } catch (UserNotFoundException | UnknownItemTypeException e) {
+        } catch (UserNotFoundException e) {
             logger.operateFailure("Remove Items", e,
                     authentication,
                     Info.of(List.of(paths), "TargetPaths"),
@@ -236,7 +240,7 @@ public class UserFileController {
             temp.data.setItemName(newName);
             itemRepository.save(temp.data);
 
-            logger.fileOperateSuccess(authentication.getName(), "Rename File",
+            logger.userOperateFailure(authentication.getName(), "Rename File",
                     Info.of(oldFilePath, "oldName"),
                     Info.of(newName, "newName"));
             return Result.okResult(newName);
@@ -268,7 +272,7 @@ public class UserFileController {
                             Info.of(targetPath, "targetPath"),
                             Info.of(target.hidden, "hiddenStatus"));
                     return Result.okResult(true);
-                } catch (FileNotFoundException | RootPathNotExistException e) {
+                } catch (FileNotFoundException | RootPathNotExistException | ItemNotFoundException e) {
                     logger.operateFailure("Change Status",
                             authentication,
                             Info.of(targetPath, "targetPath"));
@@ -301,7 +305,7 @@ public class UserFileController {
 
             logger.fileOperateSuccess(user, "Restore File", Info.of(targetPath, "targetPath"));
             return Result.okResult(Boolean.TRUE);
-        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException e) {
+        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | ItemNotFoundException e) {
             logger.operateFailure("Restore File", authentication, Info.of(targetPath, "TargetPath"));
             return Result.failureResult(e);
         }
@@ -321,7 +325,7 @@ public class UserFileController {
         //remove
         var fileSizes = RawRemove.map(path -> fileUploader.delete(path.getFileName().toString()));
         var sum = fileSizes.reduce(0L, Long::sum);
-        logger.fileOperateSuccess("ALL-USER", "Remove Failure File", Info.of(sum, "Remove file count"));
+        logger.userOperateSuccess("ALL-USER", "Remove Failure File", Info.of(sum, "Remove file count"));
     }
 
 

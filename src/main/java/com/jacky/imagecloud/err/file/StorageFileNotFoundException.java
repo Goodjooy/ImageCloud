@@ -1,8 +1,10 @@
-package com.jacky.imagecloud.err;
+package com.jacky.imagecloud.err.file;
+
+import com.jacky.imagecloud.err.BaseRuntimeException;
 
 import java.net.MalformedURLException;
 
-public class StorageFileNotFoundException extends RuntimeException {
+public class StorageFileNotFoundException extends BaseRuntimeException {
     public StorageFileNotFoundException(String s, Throwable e) {
         super(s,e);
     }

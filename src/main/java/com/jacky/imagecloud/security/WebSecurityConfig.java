@@ -2,16 +2,22 @@ package com.jacky.imagecloud.security;
 
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.models.users.UserRepository;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import javax.servlet.http.HttpServletRequest;
 
 @Configuration
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
@@ -92,6 +98,15 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .rememberMe()
                 .tokenValiditySeconds(12 * 3600 * 60)
+
+                .and()
+                .cors()
+                .configurationSource(request -> {
+                    CorsConfiguration configuration=new CorsConfiguration();
+                    configuration.addAllowedMethod(HttpMethod.GET);
+                    configuration.addAllowedOrigin("https://www.bilibili.com");
+                    return  configuration;
+                })
 
                 .and() //;
                 .csrf().disable()

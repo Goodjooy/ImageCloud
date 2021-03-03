@@ -1,6 +1,8 @@
-package com.jacky.imagecloud.err;
+package com.jacky.imagecloud.err.file;
 
-public class FileFormatNotSupportException extends RuntimeException{
+import com.jacky.imagecloud.err.BaseRuntimeException;
+
+public class FileFormatNotSupportException extends BaseRuntimeException {
     public FileFormatNotSupportException(String message){
         super(message);
     }

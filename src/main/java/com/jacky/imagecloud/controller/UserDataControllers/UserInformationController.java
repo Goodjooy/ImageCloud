@@ -7,8 +7,8 @@ import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.data.VerifyCodeContainer;
 import com.jacky.imagecloud.email.EmailSender;
-import com.jacky.imagecloud.err.StorageException;
-import com.jacky.imagecloud.err.UserNotFoundException;
+import com.jacky.imagecloud.err.file.StorageException;
+import com.jacky.imagecloud.err.user.*;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserImage;
 import com.jacky.imagecloud.models.users.UserInformation;
@@ -16,7 +16,6 @@ import com.jacky.imagecloud.models.users.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.core.io.Resource;
-import org.springframework.dao.PermissionDeniedDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.naming.AuthenticationNotSupportedException;
-import javax.persistence.criteria.CriteriaBuilder;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -113,7 +111,7 @@ public class UserInformationController {
             logger.userOperateSuccess(user, "Upload Head Image",
                     Info.of(file.getOriginalFilename(), "Image Name"));
             return Result.okResult(true);
-        } catch (UserNotFoundException e) {
+        } catch (UserNotFoundException | StorageException e) {
             logger.userOperateFailure(authentication.getName(),
                     "Upload Head Image",
                     e,
@@ -130,21 +128,22 @@ public class UserInformationController {
             @PathVariable(name = "filename") String filename
     ) {
         logger.dataAccept(Info.of(size, "Head Image Size"));
+        try {
+            User user = User.databaseUser(userRepository, authentication);
+            if (!user.image.getFileName().equals(filename))
+                throw new NotAllowRequestException(user, filename);
 
-        User user = User.databaseUser(userRepository, authentication);
-        if (user.image.getFileName().equals(filename)) {
             Resource file = storageService.loadAsResource(filename, size);
 
-            logger.userOperateSuccess(user,"Find Head Image",
-                    Info.of(filename,"ImageName"),
-                    Info.of(size,"ImageSize"));
+            logger.userOperateSuccess(user, "Get Head Image",
+                    Info.of(filename, "ImageName"),
+                    Info.of(size, "ImageSize"));
             return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"" + filename + "\"").body(file);
-        }
-        else {
-            logger.userOperateFailure(authentication.getName(),"Find Head Image",
-                    Info.of(filename,"ImageName"),
-                    Info.of(size,"ImageSize"));
+        } catch (NotAllowRequestException | UserNotFoundException e) {
+            logger.userOperateFailure(authentication.getName(), "Get Head Image", e,
+                    Info.of(filename, "ImageName"),
+                    Info.of(size, "ImageSize"));
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
@@ -153,12 +152,22 @@ public class UserInformationController {
     public Result<Boolean> userEmailVerify(
             Authentication authentication
     ) {
-        logger.dataAccept(Info.of(authentication.getName(),"User For Verify"));
+        logger.dataAccept(Info.of(authentication.getName(), "User For Verify"));
 
-        User user = User.databaseUser(userRepository, authentication);
-        generateVerifyCode();
-        emailSender.sendVerifyCode(verifyCode.getCode(), user.emailAddress);
-        return Result.okResult(Boolean.TRUE);
+        try {
+            User user = User.databaseUser(userRepository, authentication);
+            if (user.information.verify)
+                throw new UserVerifiedException(user);
+
+            generateVerifyCode();
+            emailSender.sendVerifyCode(verifyCode.getCode(), user.emailAddress);
+
+            logger.userOperateSuccess(user, "Send Verify Email");
+            return Result.okResult(Boolean.TRUE);
+        } catch (NotEnoughTimeBetweenDifferentVerifyCodeGenerationException | UserNotFoundException | UserVerifiedException e) {
+            logger.userOperateFailure(authentication.getName(), "Send Verify Email", e);
+            return Result.failureResult(e);
+        }
     }
 
     @PostMapping(path = "/verify")
@@ -167,7 +176,7 @@ public class UserInformationController {
             @RequestParam(name = "code") String verifyCode
     ) {
         try {
-            logger.dataAccept(Info.of(verifyCode,"Verify code"));
+            logger.dataAccept(Info.of(verifyCode, "Verify code"));
 
             User user = User.databaseUser(userRepository, authentication);
             var status = this.verifyCode.match(verifyCode);
@@ -175,26 +184,28 @@ public class UserInformationController {
                 user.information.verify = true;
                 userRepository.save(user);
 
-                logger.userOperateSuccess(user,"Verify Email");
+                logger.userOperateSuccess(user, "Verify Email");
                 return Result.okResult(true);
             }
-            logger.userOperateFailure(user.name, "Verify Email",Info.of("Bad Verify Code","Reason"));
-            return Result.failureResult("Bad Verify Code");
+            throw new VerifyFailureException(verifyCode);
         } catch (Exception e) {
-            logger.userOperateFailure(authentication.getName(),"Verify Email",e);
-
+            logger.userOperateFailure(authentication.getName(), "Verify Email", e);
             return Result.failureResult(e);
         }
     }
 
     @ExceptionHandler(StorageException.class)
-    public ResponseEntity<?>handleException(StorageException e){
-        logger.operateFailure("Storage Server",e);
+    public ResponseEntity<?> handleException(StorageException e) {
+        logger.operateFailure("Storage Server", e);
         return ResponseEntity.notFound().build();
     }
 
 
-    private void generateVerifyCode() {
+    private void generateVerifyCode() throws NotEnoughTimeBetweenDifferentVerifyCodeGenerationException {
+        var now = LocalDateTime.now();
+        if (verifyCode != null && verifyCode.noNeedNewGenerate(now))
+            throw new NotEnoughTimeBetweenDifferentVerifyCodeGenerationException(verifyCode.deltaTime(now));
+
         lock.lock();
         verifyCode = VerifyCodeContainer.newVerify();
         lock.unlock();

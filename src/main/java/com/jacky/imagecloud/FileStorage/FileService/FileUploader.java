@@ -1,5 +1,6 @@
 package com.jacky.imagecloud.FileStorage.FileService;
 
+import com.jacky.imagecloud.data.LoggerHandle;
 import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -8,6 +9,7 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public interface FileUploader<T> {
+
     void init();
 
     T storage(MultipartFile file);
@@ -34,7 +36,7 @@ public interface FileUploader<T> {
      * @param varLevel 格式化字符串保留小数点
      * @return 格式化完成的文件大小
      */
-    public static String formatSize(long bit, float edge, int varLevel) {
+    static String formatSize(long bit, float edge, int varLevel) {
         var formatString = "%." + varLevel + "f";
         var resultFormat = "%s %s";
 

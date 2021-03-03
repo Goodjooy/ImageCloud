@@ -27,6 +27,7 @@ public class TestController {
     }
 
     @ExceptionHandler(Throwable.class)
+    @ResponseBody
     public Result<Throwable> handleException(
             ServletRequest request,
             Throwable exception
@@ -60,5 +61,18 @@ public class TestController {
     ){
         model.addAttribute("email",email);
         return "user-find-password";
+    }
+    @GetMapping(path = "/upload")
+    public String uploadFile() {
+        return "file-upload";
+    }
+
+    @GetMapping(path = "/headup")
+    public String uploadHead() {
+        return "head-upload";
+    }
+    @GetMapping("/test-cors")
+    public String testCors(){
+        return "test-cors";
     }
 }

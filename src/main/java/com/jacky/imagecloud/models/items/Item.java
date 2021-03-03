@@ -1,7 +1,8 @@
 package com.jacky.imagecloud.models.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.jacky.imagecloud.err.RootPathNotExistException;
+import com.jacky.imagecloud.err.item.ItemNotFoundException;
+import com.jacky.imagecloud.err.item.RootPathNotExistException;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
 
@@ -123,6 +124,8 @@ public class Item {
     }
 
     public void sortSubItems(ItemSort type, boolean reverse) {
+        if (type==ItemSort.off)return;
+
         var dir = SubItems.stream().filter(item -> item.itemType == ItemType.DIR).collect(Collectors.toList());
         var file = SubItems.stream().filter(item -> item.itemType == ItemType.FILE).collect(Collectors.toList());
         Comparator<Item> comparator;
@@ -189,7 +192,7 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item getTargetItem(@NotNull String path, boolean withHidden) throws FileNotFoundException, RootPathNotExistException {
+    public Item getTargetItem(@NotNull String path, boolean withHidden) throws FileNotFoundException, RootPathNotExistException, ItemNotFoundException {
 
         var pathGroup = splitPath(path);
 
@@ -198,7 +201,7 @@ public class Item {
                 pathGroup) {
             temp = temp.findTargetItem(p, withHidden);
             if (temp == null) {
-                throw new FileNotFoundException(String.format("path: `%s` not exist", path));
+                throw new ItemNotFoundException(path);
             }
         }
         return temp;

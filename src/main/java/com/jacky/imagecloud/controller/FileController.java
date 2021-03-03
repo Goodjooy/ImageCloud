@@ -1,9 +1,10 @@
 package com.jacky.imagecloud.controller;
 
 import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
-import com.jacky.imagecloud.data.Result;
-import com.jacky.imagecloud.err.StorageFileNotFoundException;
-import com.jacky.imagecloud.err.UserNotFoundException;
+import com.jacky.imagecloud.data.Info;
+import com.jacky.imagecloud.data.LoggerHandle;
+import com.jacky.imagecloud.err.file.StorageException;
+import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.slf4j.Logger;
@@ -22,24 +23,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class FileController {
-    Logger logger = LoggerFactory.getLogger(FileController.class);
+    LoggerHandle logger = LoggerHandle.newLogger(FileController.class);
 
     @Autowired
     FileSystemStorageService fileUploader;
     @Autowired
     UserRepository repository;
 
-    @GetMapping(path = "/upload")
-    public String uploadFile() {
-        logger.debug("upload file page");
 
-        return "file-upload";
-    }
-
-    @GetMapping(path = "/headup")
-    public String uploadHead() {
-        return "head-upload";
-    }
 
     @GetMapping("/headImagePreview")
     public String headImagePreview(
@@ -57,7 +48,6 @@ public class FileController {
         model.addAttribute("i32",image.getFileX32URL());
         model.addAttribute("i16",image.getFileX16URL());
 
-
         logger.info(String.format("preview user<%s> headImages", user.emailAddress));
         return "head-preview";
     }
@@ -67,14 +57,15 @@ public class FileController {
         //storage,thumbnail
         model.addAttribute("fileS", "/storage/" + filename)
                 .addAttribute("fileT", "/thumbnail/" + filename);
-        logger.debug("preview file page filename:" + filename);
+        logger.info("preview file page filename:" + filename);
         return "file-preview";
     }
 
     @GetMapping("/storage/{filename:.+}")
     @ResponseBody
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
-        logger.info(String.format("finding file<%s> in Storage zone", filename));
+        logger.storageFileOperateSuccess(filename,"Find Raw Image", Info.of("In Storage Zone","Where"));
+
         Resource file = fileUploader.loadAsResource(filename);
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"" + file.getFilename() + "\"").body(file);
@@ -82,9 +73,17 @@ public class FileController {
 
     @GetMapping("/thumbnail/{filename:.+}")
     public ResponseEntity<Resource> thumbnailFIle(@PathVariable String filename) {
-        logger.info(String.format("finding file<%s> in Thumbnail zone", filename));
+        logger.storageFileOperateSuccess(filename,"Find Raw Image", Info.of("In Thumbnail Zone","Where"));
+
         Resource file = fileUploader.loadThumbnailAsResource(filename);
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
                 String.format("attachment; filename=\"%s\"", file.getFilename())).body(file);
+    }
+
+    @ExceptionHandler(StorageException.class)
+    public ResponseEntity<?>storageExceptionHandle(StorageException e){
+        logger.storageFileOperateFailure(e);
+
+        return ResponseEntity.notFound().build();
     }
 }

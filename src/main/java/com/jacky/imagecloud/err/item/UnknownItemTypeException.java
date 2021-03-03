@@ -1,6 +1,8 @@
-package com.jacky.imagecloud.err;
+package com.jacky.imagecloud.err.item;
 
-public class UnknownItemTypeException extends RuntimeException{
+import com.jacky.imagecloud.err.BaseException;
+
+public class UnknownItemTypeException extends BaseException {
     public UnknownItemTypeException(String message){
         super(message);
     }
