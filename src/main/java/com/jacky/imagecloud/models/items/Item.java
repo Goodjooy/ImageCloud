@@ -273,8 +273,9 @@ public class Item {
         parentID = item.getId();
 
     }
-    public boolean isRootItem(){
-        return parentID<0 && itemName.equalsIgnoreCase("root");
+
+    public boolean isRootItem() {
+        return parentID < 0 && itemName.equalsIgnoreCase("root");
     }
 
     public void setSameParentItem(Item sameParentItem) {
@@ -326,10 +327,10 @@ public class Item {
     }
 
     public void reverseHidden() throws RootPathCanNotBeHiddenException {
-        if (this.parentID<0 && itemName.equalsIgnoreCase("root")&& hidden)
-                        throw new RootPathCanNotBeHiddenException();
-        this.time.modifyTime= LocalDateTime.now();
-        hidden=!hidden;
+        if (isRootItem() && !hidden)
+            throw new RootPathCanNotBeHiddenException();
+        this.time.modifyTime = LocalDateTime.now();
+        hidden = !hidden;
     }
 
     @Override
