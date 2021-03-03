@@ -3,6 +3,7 @@ package com.jacky.imagecloud.models.items;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jacky.imagecloud.err.item.ItemNotFoundException;
 import com.jacky.imagecloud.err.item.RootPathNotExistException;
+import com.jacky.imagecloud.err.item.UnknownItemTypeException;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
 
@@ -44,7 +45,7 @@ public class Item {
     private Integer parentID;
 
     @Transient
-    private List<Item> SubItems;
+    private List<Item> subItems;
 
     @OneToOne(mappedBy = "item", fetch = FetchType.LAZY)
     public FileStorage file;
@@ -53,7 +54,7 @@ public class Item {
     public Boolean hidden;
 
     public Item() {
-        SubItems=new LinkedList<>();
+        subItems = new LinkedList<>();
     }
 
     public static Item NewDefaultItem() {
@@ -117,17 +118,17 @@ public class Item {
     }
 
     public List<String> getSameNameSubItem(String name, ItemType type) {
-        return SubItems.stream()
+        return subItems.stream()
                 .filter(item -> item.itemName.equals(name) && item.itemType == type)
                 .map(item -> item.itemName).sorted().collect(Collectors.toList());
 
     }
 
     public void sortSubItems(ItemSort type, boolean reverse) {
-        if (type==ItemSort.off)return;
+        if (type == ItemSort.off) return;
 
-        var dir = SubItems.stream().filter(item -> item.itemType == ItemType.DIR).collect(Collectors.toList());
-        var file = SubItems.stream().filter(item -> item.itemType == ItemType.FILE).collect(Collectors.toList());
+        var dir = subItems.stream().filter(item -> item.itemType == ItemType.DIR).collect(Collectors.toList());
+        var file = subItems.stream().filter(item -> item.itemType == ItemType.FILE).collect(Collectors.toList());
         Comparator<Item> comparator;
         switch (type) {
             case name: {
@@ -154,14 +155,15 @@ public class Item {
         temp.addAll(sortedFile);
         temp.addAll(sortedDir);
 
-        SubItems = temp;
+        subItems = temp;
     }
 
     public HashMap<String, Item> findAllRemoveSubItem() {
         HashMap<String, Item> result = new HashMap<>();
-        var items = SubItems.stream().filter(item -> item.removed
+        var items = subItems.stream().filter(item -> item.removed
         ).map((item) -> result.put(String.format("%s/%s", itemName, item.itemName), item)).collect(Collectors.toSet());
-        var re = SubItems.stream().filter(item -> !item.removed).map(item -> {
+
+        var re = subItems.stream().filter(item -> !item.removed).map(item -> {
             var temps = item.findAllRemoveSubItem();
             for (String key : temps.keySet()) {
                 result.put(String.format("%s/%s", itemName, key), temps.get(key));
@@ -172,27 +174,25 @@ public class Item {
     }
 
     @JsonIgnore
-    public LinkedList<Item> transformSubItemsToList() {
+    public LinkedList<Item> transformSubItemsToList() throws UnknownItemTypeException {
         var items = new LinkedList<Item>();
         for (Item item :
-                SubItems) {
-            switch (item.itemType) {
-                case DIR: {
-                    items.add(item);
-                    items.addAll(item.transformSubItemsToList());
-
-                    break;
-                }
-                case FILE: {
-                    items.add(item);
-                }
+                subItems) {
+            if (item.itemType == ItemType.DIR) {
+                items.add(item);
+                items.addAll(item.transformSubItemsToList());
+            } else if (item.itemType == ItemType.FILE) {
+                items.add(item);
+            } else {
+                throw new UnknownItemTypeException(String.format("Item Type<%s> not Support", item.itemType));
             }
         }
         return items;
     }
 
     @JsonIgnore
-    public Item getTargetItem(@NotNull String path, boolean withHidden) throws FileNotFoundException, RootPathNotExistException, ItemNotFoundException {
+    public Item getTargetItem(@NotNull String path,
+                              boolean withHidden) throws FileNotFoundException, RootPathNotExistException, ItemNotFoundException {
 
         var pathGroup = splitPath(path);
 
@@ -227,13 +227,14 @@ public class Item {
         if (itemName.equals(path))
             targetItem = this;
 
-        if (SubItems != null) {
-            for (Item subItem :
-                    SubItems) {
-                if (subItem.itemName.equals(path)) {
-                    targetItem = subItem;
-                    break;
-                }
+        if (subItems == null)
+            subItems = new LinkedList<>();
+
+        for (Item subItem :
+                subItems) {
+            if (subItem.itemName.equals(path)) {
+                targetItem = subItem;
+                break;
             }
         }
         if (!withHidden && targetItem != null && targetItem.hidden) {
@@ -245,12 +246,12 @@ public class Item {
 
     public void getAllSUbItemFromSet(Set<Item> filteredItems) {
         var result = filteredItems.stream().filter(item -> item.getParentID() == (id));
-        this.SubItems = result.collect(Collectors.toList());
+        this.subItems = result.collect(Collectors.toList());
     }
 
     public void generateSubStruct(Set<Item> items) {
         getAllSUbItemFromSet(items);
-        for (Item item : SubItems) {
+        for (Item item : subItems) {
             item.generateSubStruct(items);
         }
     }
@@ -279,7 +280,7 @@ public class Item {
     }
 
     public List<Item> getSubItems() {
-        return SubItems;
+        return subItems;
     }
 
     public Integer getId() {
@@ -325,5 +326,18 @@ public class Item {
                 ", parentID=" + parentID +
                 ", hidden=" + hidden +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Item)) return false;
+        Item item = (Item) o;
+        return Objects.equals(id, item.id) && Objects.equals(removed, item.removed) && Objects.equals(itemName, item.itemName) && itemType == item.itemType && Objects.equals(user, item.user) && Objects.equals(time, item.time) && Objects.equals(parentID, item.parentID) && Objects.equals(subItems, item.subItems) && Objects.equals(file, item.file) && Objects.equals(hidden, item.hidden);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, removed, itemName, itemType, user, time, parentID, subItems, file, hidden);
     }
 }

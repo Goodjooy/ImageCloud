@@ -40,7 +40,7 @@ public class Result<DATA> {
     }
 
     public static <T> Result<T> failureResult(Exception e) {
-        return new Result<>(null, true, String.format("exception: <%s>: %s", e.getClass().getName(), e.getMessage()), e);
+        return new Result<>(null, true, String.format("Exception<%s>: %s", e.getClass().getName(), e.getMessage()), e);
     }
 
     public static <T extends Throwable> Result<T> exceptionResult(T exception, ServletRequest request) {

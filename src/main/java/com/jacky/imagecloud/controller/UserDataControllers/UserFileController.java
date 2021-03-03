@@ -5,6 +5,7 @@ import com.jacky.imagecloud.data.Info;
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.err.file.EmptyFileException;
+import com.jacky.imagecloud.err.item.ItemExistException;
 import com.jacky.imagecloud.err.item.ItemNotFoundException;
 import com.jacky.imagecloud.err.item.RootPathNotExistException;
 import com.jacky.imagecloud.err.item.UnknownItemTypeException;
@@ -222,7 +223,7 @@ public class UserFileController {
 
             logger.createSuccess(user, path, Info.of(hidden, "hidden"));
             return new Result<>(true);
-        } catch (UserNotFoundException | RootPathNotExistException | FileAlreadyExistsException e) {
+        } catch (UserNotFoundException | RootPathNotExistException | ItemExistException e) {
             logger.operateFailure("Create Directory", e, authentication,
                     Info.of(hidden, "hidden")
             );
@@ -374,7 +375,7 @@ public class UserFileController {
     private Item appendNotExistItems(User user,
                                      String path,
                                      boolean hidden,
-                                     boolean fileSave) throws RootPathNotExistException, FileAlreadyExistsException {
+                                     boolean fileSave) throws RootPathNotExistException, ItemExistException {
         var items = GetItemTree(path, user.rootItem, hidden);
         Item lastItem = Item.DefaultItem();
 
@@ -391,7 +392,7 @@ public class UserFileController {
             lastItem = item;
         }
         if (count == items.size() && !fileSave) {
-            throw new FileAlreadyExistsException(String.format("all directory in path<%s> is exist", path));
+            throw new ItemExistException(path);
         }
         return lastItem;
     }

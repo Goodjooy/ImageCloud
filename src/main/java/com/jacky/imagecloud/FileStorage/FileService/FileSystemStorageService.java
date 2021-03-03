@@ -1,20 +1,8 @@
 package com.jacky.imagecloud.FileStorage.FileService;
 
-import java.io.*;
-import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-
 import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
-import com.jacky.imagecloud.configs.StorageProperties;
 import com.jacky.imagecloud.FileStorage.image.ImageProcess;
+import com.jacky.imagecloud.configs.StorageProperties;
 import com.jacky.imagecloud.err.file.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.file.StorageException;
 import com.jacky.imagecloud.err.file.StorageFileNotFoundException;
@@ -28,6 +16,17 @@ import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 @Service
 public class FileSystemStorageService implements FileUploader<FileStorage> {
@@ -37,9 +36,6 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     private final Path rootThumbnailLocation;
 
     private static final float maxSize = 256;
-    private static final float MaxHeight = 256;
-
-    private static final float scale = 0.4f;
 
 
     @Autowired
@@ -50,32 +46,33 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         this.init();
     }
 
-    public ByteArrayOutputStream copyStream(InputStream inputStream){
-        ByteArrayOutputStream byteArrayInputStream=new ByteArrayOutputStream();
+    public ByteArrayOutputStream copyStream(InputStream inputStream) {
+        ByteArrayOutputStream byteArrayInputStream = new ByteArrayOutputStream();
         try {
-            byte []buffer=new byte[inputStream.available()];
-            int len;
-            len=inputStream.read(buffer);
+            byte[] buffer = new byte[inputStream.available()];
+            var t = inputStream.read(buffer);
             byteArrayInputStream.write(buffer);
             byteArrayInputStream.flush();
             return byteArrayInputStream;
         } catch (IOException e) {
             e.printStackTrace();
-            throw new StorageException("failure to storage file",e);
+            throw new StorageException(String.format("Clone InputStream Failure | Reason:<%s>: %s",
+                    e.getClass().getName(), e.getMessage()
+            ), e);
         }
     }
 
     public void SaveImageWithThumbnail(InputStream inputStream,
                                        @NotNull String fileName,
                                        @NotNull String fileExtra) throws IOException {
-        var supports=List.of(ImageIO.getReaderFormatNames());
+        var supports = List.of(ImageIO.getReaderFormatNames());
         if (!supports.contains(fileExtra.toLowerCase()))
-            throw new FileFormatNotSupportException(String.format("file format name<%s> not support",fileExtra));
+            throw new FileFormatNotSupportException(String.format("file format name<%s> not support", fileExtra));
 
-        var copyStream=copyStream(inputStream);
+        var copyStream = copyStream(inputStream);
         //图像压缩比计算
         var ThumbnailImage = ImageProcess.transformImage(
-                new ByteArrayInputStream(copyStream.toByteArray()),fileName,(int) maxSize);
+                new ByteArrayInputStream(copyStream.toByteArray()), fileName, (int) maxSize);
         var RawPath = rootRawLocation.resolve(
                 Path.of(Objects.requireNonNull(fileName))
         ).normalize().toAbsolutePath();
@@ -87,7 +84,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
                 ThumbnailPath.getParent().equals(rootThumbnailLocation.toAbsolutePath()))
             throw new StorageException("Cannot store file outside current directory.");
 
-        Files.copy(new ByteArrayInputStream(copyStream.toByteArray()),RawPath,StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(new ByteArrayInputStream(copyStream.toByteArray()), RawPath, StandardCopyOption.REPLACE_EXISTING);
         ImageIO.write(ThumbnailImage, fileExtra, ThumbnailPath.toFile());
     }
 
@@ -97,7 +94,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         try {
             FileStorage storage = new FileStorage();
             if (file.isEmpty()) {
-                throw new StorageException("Failed to store empty file.");
+                throw new StorageException(String.format("Failed to store empty file<%s>.", file.getOriginalFilename()));
             }
             String exName = "";
             String fileExtra = "";
@@ -112,7 +109,9 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             SaveImageWithThumbnail(file.getInputStream(), saveFileName, fileExtra);
             return storage;
         } catch (IOException e) {
-            throw new StorageException("Failed to store file.", e);
+            throw new StorageException(String.format("Failed to store file.| %s: %s"
+                    , e.getClass().getName(), e.getMessage()
+            ), e);
         }
     }
 
@@ -127,9 +126,10 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         }
 
     }
-    public Stream<Path>loadAllInThumbnail(){
+
+    public Stream<Path> loadAllInThumbnail() {
         try {
-            return Files.walk(this.rootThumbnailLocation,1)
+            return Files.walk(this.rootThumbnailLocation, 1)
                     .filter(path -> !path.equals(this.rootThumbnailLocation))
                     .map(this.rootThumbnailLocation::relativize);
         } catch (IOException e) {
@@ -169,11 +169,11 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             if (resource.exists() || resource.isReadable()) {
                 return resource;
             } else {
-                Path RawFile=load(filename);
-                var Image= ImageProcess.transformImage(RawFile.toFile(), (int) maxSize);
-                ImageProcess.BufferImageToFile(Image,ImageProcess.getFileFormat(file),file.toFile());
-                return  new OutputStreamResource(ImageProcess.BufferImageToOutputStream(Image,
-                        ImageProcess.getFileFormat(filename)),file);
+                Path RawFile = load(filename);
+                var Image = ImageProcess.transformImage(RawFile.toFile(), (int) maxSize);
+                ImageProcess.BufferImageToFile(Image, ImageProcess.getFileFormat(file), file.toFile());
+                return new OutputStreamResource(ImageProcess.BufferImageToOutputStream(Image,
+                        ImageProcess.getFileFormat(filename)), file);
             }
         } catch (IOException e) {
             throw new StorageFileNotFoundException("Could not read thumbnail file: " + filename, e);

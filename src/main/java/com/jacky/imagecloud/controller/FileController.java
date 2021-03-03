@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
 @Controller
 public class FileController {
     LoggerHandle logger = LoggerHandle.newLogger(FileController.class);
@@ -73,7 +76,7 @@ public class FileController {
 
     @GetMapping("/thumbnail/{filename:.+}")
     public ResponseEntity<Resource> thumbnailFIle(@PathVariable String filename) {
-        logger.storageFileOperateSuccess(filename,"Find Raw Image", Info.of("In Thumbnail Zone","Where"));
+        logger.storageFileOperateSuccess(filename,"Find Thumbnail Image", Info.of("In Thumbnail Zone","Where"));
 
         Resource file = fileUploader.loadThumbnailAsResource(filename);
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
@@ -81,7 +84,7 @@ public class FileController {
     }
 
     @ExceptionHandler(StorageException.class)
-    public ResponseEntity<?>storageExceptionHandle(StorageException e){
+    public ResponseEntity<?>storageExceptionHandle(StorageException e, ServletRequest request, ServletResponse response){
         logger.storageFileOperateFailure(e);
 
         return ResponseEntity.notFound().build();

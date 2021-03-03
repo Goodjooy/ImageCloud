@@ -14,4 +14,8 @@ public class Info <T>{
         return info;
     }
 
+    @Override
+    public String toString() {
+        return String.format("[%s<%s>: %s]",name,valueType.getName(),value);
+    }
 }

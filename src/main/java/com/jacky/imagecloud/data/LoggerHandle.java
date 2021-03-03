@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import java.util.Map;
 
 public class LoggerHandle {
@@ -174,6 +176,13 @@ public class LoggerHandle {
     }
 
     public void storageFileOperateFailure(Throwable throwable, Info<?>... extraInfo) {
+        error(String.format(
+                "`Operation Storage File` Failure |%s"
+                , extraInformation(extraInfo)
+        ), throwable);
+    }
+    public void storageFileOperateFailure(Throwable throwable, ServletRequest request, ServletResponse response, Info<?>... extraInfo) {
+
         error(String.format(
                 "`Operation Storage File` Failure |%s"
                 , extraInformation(extraInfo)

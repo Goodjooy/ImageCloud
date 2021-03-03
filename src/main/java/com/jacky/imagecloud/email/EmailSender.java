@@ -15,9 +15,10 @@ public class EmailSender {
     @Autowired
     JavaMailSender mailSender;
 
-    Logger logger= LoggerFactory.getLogger(EmailSender.class);
+    Logger logger = LoggerFactory.getLogger(EmailSender.class);
 
-    final String verifyInfo="your verify code is [%s]\nmessage:%s";
+    final String verifyInfo = "your verify code is<h2>%s</h2><br><h3>message:</h3><p> If You Never Known About the ImageCloud ,Ignore This Email<br>" +
+            "The Email is for User`%s`</p>";
 
     public void sendEmail(String title, String sendMessage, boolean htmlType, String to) {
         var message = mailSender.createMimeMessage();
@@ -29,19 +30,19 @@ public class EmailSender {
             helper.setFrom(from);
             helper.setTo(to);
 
-            logger.info(String.format("send email to <%s> success [%s]",to,title));
+            logger.info(String.format("send email to <%s> success [%s]", to, title));
             mailSender.send(message);
         } catch (MessagingException e) {
-            logger.error(String.format("send email to <%s> failure [%s]",to,title),e);
+            logger.error(String.format("send email to <%s> failure [%s]", to, title), e);
         }
     }
-    public void sendVerifyCode(String code, String email){
-        sendEmail("Verify Code",String.format(verifyInfo,code,String.format("the code is for user<%s>",email)),false,email);
+
+    public void sendVerifyCode(String code, String email) {
+        sendEmail("Verify Code", String.format(verifyInfo, code, email), true, email);
     }
 
-    public boolean sendPasswordFinderCode(String code,String email){
+    public void sendPasswordFinderCode(String code, String email) {
         sendEmail("Find Password Verify Code",
-                String.format(verifyInfo,code,String.format("the code is for user<%s>",email)),false,email);
-        return true;
+                String.format(verifyInfo, code, email), true, email);
     }
 }
