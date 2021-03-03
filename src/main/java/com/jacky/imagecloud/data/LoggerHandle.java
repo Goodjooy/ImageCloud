@@ -87,7 +87,7 @@ public class LoggerHandle {
     public void findSuccess(User user, String path, Item targetItem, Info<?>... infoList) {
         var information = String.format(
                 "`Find Item` Success ! | Path<%s> | Item<name: %s | type: %s | hidden: %s> | User<%s | %s> |%s", path,
-                targetItem.getItemName(), targetItem.getItemType(), targetItem.hidden,
+                targetItem.getItemName(), targetItem.getItemType(), targetItem.getHidden(),
                 user.name, user.emailAddress, extraInformation(infoList)
         );
         logger.info(information);
@@ -97,7 +97,7 @@ public class LoggerHandle {
         var information = String.format(
                 "`Delete Item` Success ! | Path<%s> | Item<name: %s | type: %s | hidden: %s> | User<%s | %s> |%s",
                 path,
-                targetItem.getItemName(), targetItem.getItemType(), targetItem.hidden,
+                targetItem.getItemName(), targetItem.getItemType(), targetItem.getHidden(),
                 user.name, user.emailAddress, extraInformation(infoList)
         );
         logger.info(information);

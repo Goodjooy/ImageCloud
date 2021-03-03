@@ -262,3 +262,7 @@
      boolean verify;
   }
   ```
+
+## 异常描述
+
+* `EmptyFileException`  

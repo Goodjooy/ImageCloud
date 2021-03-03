@@ -1,6 +1,10 @@
 package com.jacky.imagecloud.security;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jacky.imagecloud.data.LoggerHandle;
+import com.jacky.imagecloud.data.Result;
 import org.slf4j.Logger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -31,11 +35,13 @@ public class LoginFailureHandle implements AuthenticationFailureHandler {
         //失败情况
         logger.authenticationFailure(request.getParameter("uid"),exception);
         var writer = response.getWriter();
-        writer.format(
-                "{\"data\":null," +
-                        "\"err\":true," +
-                        "\"message\":\"%s\"}",
-                String.format("user <%s> authentication failure", request.getParameter("uid"))
+
+        ObjectMapper mapper=new ObjectMapper();
+        Result<?> result=Result.failureResult(exception);
+        String str=mapper.writeValueAsString(result);
+
+        writer.print(
+                str
         );
         response.setHeader("Content-Type", "application/json");
     }

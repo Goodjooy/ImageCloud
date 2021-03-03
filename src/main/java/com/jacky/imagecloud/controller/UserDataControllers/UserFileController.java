@@ -4,11 +4,10 @@ import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
 import com.jacky.imagecloud.data.Info;
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
+import com.jacky.imagecloud.err.BaseException;
+import com.jacky.imagecloud.err.BaseRuntimeException;
 import com.jacky.imagecloud.err.file.EmptyFileException;
-import com.jacky.imagecloud.err.item.ItemExistException;
-import com.jacky.imagecloud.err.item.ItemNotFoundException;
-import com.jacky.imagecloud.err.item.RootPathNotExistException;
-import com.jacky.imagecloud.err.item.UnknownItemTypeException;
+import com.jacky.imagecloud.err.item.*;
 import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.err.user.UserSpaceNotEnoughException;
 import com.jacky.imagecloud.models.items.*;
@@ -175,7 +174,7 @@ public class UserFileController {
                             Info.of(removeTargetDir, "removeTargetDir"));
 
                     return Result.okResult(true);
-                } catch (FileNotFoundException | RootPathNotExistException | UnknownItemTypeException | ItemNotFoundException e) {
+                } catch ( BaseException | BaseRuntimeException e) {
                     logger.operateFailure("Remove One Item In All Item", e, authentication,
                             Info.of(path, "targetPath"),
                             Info.of(flatRemove, "flatRemove"),
@@ -184,7 +183,7 @@ public class UserFileController {
                 }
             });
             return new Result<>(result.collect(Collectors.toList()));
-        } catch (UserNotFoundException e) {
+        } catch (BaseException | BaseRuntimeException e) {
             logger.operateFailure("Remove Items", e,
                     authentication,
                     Info.of(List.of(paths), "TargetPaths"),
@@ -203,7 +202,7 @@ public class UserFileController {
 
             logger.findRemovedTreeSuccess(user, data);
             return Result.okResult(data);
-        } catch (UserNotFoundException e) {
+        } catch (UserNotFoundException | ItemNotFoundException e) {
             logger.operateFailure("Load Flat Remove File Tree", e,
                     authentication);
             return Result.failureResult(e);
@@ -223,7 +222,7 @@ public class UserFileController {
 
             logger.createSuccess(user, path, Info.of(hidden, "hidden"));
             return new Result<>(true);
-        } catch (UserNotFoundException | RootPathNotExistException | ItemExistException e) {
+        } catch (BaseException | BaseRuntimeException e) {
             logger.operateFailure("Create Directory", e, authentication,
                     Info.of(hidden, "hidden")
             );
@@ -266,14 +265,15 @@ public class UserFileController {
                 Item target;
                 try {
                     target = user.rootItem.getTargetItem(targetPath, true);
-                    target.hidden = !target.hidden;
+
+                    target.reverseHidden();
                     itemRepository.save(target);
 
                     logger.fileOperateSuccess(user, "Change Status",
                             Info.of(targetPath, "targetPath"),
-                            Info.of(target.hidden, "hiddenStatus"));
+                            Info.of(target.getHidden(), "hiddenStatus"));
                     return Result.okResult(true);
-                } catch (FileNotFoundException | RootPathNotExistException | ItemNotFoundException e) {
+                } catch (BaseException | BaseRuntimeException e) {
                     logger.operateFailure("Change Status",
                             authentication,
                             Info.of(targetPath, "targetPath"));
@@ -284,7 +284,7 @@ public class UserFileController {
 
             userRepository.save(user);
             return Result.okResult(result.collect(Collectors.toList()));
-        } catch (UserNotFoundException e) {
+        } catch (UserNotFoundException | ItemNotFoundException e) {
             logger.operateFailure("Change File Hidden Status", e, authentication,
                     Info.of(List.of(targetPaths), "paths"));
             return Result.failureResult(e);
@@ -306,7 +306,7 @@ public class UserFileController {
 
             logger.fileOperateSuccess(user, "Restore File", Info.of(targetPath, "targetPath"));
             return Result.okResult(Boolean.TRUE);
-        } catch (UserNotFoundException | FileNotFoundException | RootPathNotExistException | ItemNotFoundException e) {
+        } catch (BaseException | BaseRuntimeException e) {
             logger.operateFailure("Restore File", authentication, Info.of(targetPath, "TargetPath"));
             return Result.failureResult(e);
         }
@@ -350,13 +350,16 @@ public class UserFileController {
         return items;
     }
 
-    private void subItemDeleter(List<Item> items, boolean flatRemove) {
+    private void subItemDeleter(List<Item> items, boolean flatRemove) throws RootDeleteException {
         for (Item item : items) {
             deleteItem(item, flatRemove);
         }
     }
 
-    private void deleteItem(Item item, boolean flatRemove) {
+    private void deleteItem(Item item, boolean flatRemove) throws RootDeleteException {
+        if(item.isRootItem())
+            throw new RootDeleteException();
+
         var user = item.getUser();
         if (item.getItemType() == ItemType.FILE && !flatRemove) {
             var size = item.file == null ? 0 : fileUploader.delete(item.file.filePath);
@@ -385,8 +388,8 @@ public class UserFileController {
                 items) {
             if (!user.seizedFiles.contains(item)) {
                 item.setParentItem(lastItem);
-                user.addItem(item);
                 itemRepository.save(item);
+                user.addItem(item);
             } else
                 count++;
             lastItem = item;

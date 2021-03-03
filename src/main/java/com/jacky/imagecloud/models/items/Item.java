@@ -2,15 +2,16 @@ package com.jacky.imagecloud.models.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jacky.imagecloud.err.item.ItemNotFoundException;
+import com.jacky.imagecloud.err.item.RootPathCanNotBeHiddenException;
 import com.jacky.imagecloud.err.item.RootPathNotExistException;
 import com.jacky.imagecloud.err.item.UnknownItemTypeException;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
 
 import javax.persistence.*;
-import java.io.FileNotFoundException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -51,7 +52,7 @@ public class Item {
     public FileStorage file;
 
     @Column(nullable = false)
-    public Boolean hidden;
+    private Boolean hidden;
 
     public Item() {
         subItems = new LinkedList<>();
@@ -192,7 +193,7 @@ public class Item {
 
     @JsonIgnore
     public Item getTargetItem(@NotNull String path,
-                              boolean withHidden) throws FileNotFoundException, RootPathNotExistException, ItemNotFoundException {
+                              boolean withHidden) throws RootPathNotExistException, ItemNotFoundException {
 
         var pathGroup = splitPath(path);
 
@@ -272,6 +273,9 @@ public class Item {
         parentID = item.getId();
 
     }
+    public boolean isRootItem(){
+        return parentID<0 && itemName.equalsIgnoreCase("root");
+    }
 
     public void setSameParentItem(Item sameParentItem) {
         if (time != null)
@@ -317,6 +321,17 @@ public class Item {
         return parentID == null ? -2 : parentID;
     }
 
+    public Boolean getHidden() {
+        return hidden;
+    }
+
+    public void reverseHidden() throws RootPathCanNotBeHiddenException {
+        if (this.parentID<0 && itemName.equalsIgnoreCase("root")&& hidden)
+                        throw new RootPathCanNotBeHiddenException();
+        this.time.modifyTime= LocalDateTime.now();
+        hidden=!hidden;
+    }
+
     @Override
     public String toString() {
         return "Item{" +
@@ -326,18 +341,5 @@ public class Item {
                 ", parentID=" + parentID +
                 ", hidden=" + hidden +
                 '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Item)) return false;
-        Item item = (Item) o;
-        return Objects.equals(id, item.id) && Objects.equals(removed, item.removed) && Objects.equals(itemName, item.itemName) && itemType == item.itemType && Objects.equals(user, item.user) && Objects.equals(time, item.time) && Objects.equals(parentID, item.parentID) && Objects.equals(subItems, item.subItems) && Objects.equals(file, item.file) && Objects.equals(hidden, item.hidden);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(id, removed, itemName, itemType, user, time, parentID, subItems, file, hidden);
     }
 }

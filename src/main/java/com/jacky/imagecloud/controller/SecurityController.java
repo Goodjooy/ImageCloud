@@ -227,7 +227,7 @@ public class SecurityController {
         } catch (Exception e) {
             logger.securityOperateFailure("Reset User Password", e,Info.of(authentication.getName(),
                     "User"),Info.of(newPassword,"NewPassword"));
-            return new Result<>(e.getMessage());
+            return Result.failureResult(e.getMessage());
         }
     }
 

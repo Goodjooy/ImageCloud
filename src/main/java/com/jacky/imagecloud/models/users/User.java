@@ -1,6 +1,7 @@
 package com.jacky.imagecloud.models.users;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.jacky.imagecloud.err.item.ItemNotFoundException;
 import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.models.items.Item;
 import org.springframework.data.domain.Example;
@@ -93,7 +94,7 @@ public class User {
     public static User databaseUser(UserRepository repository,
                                     Authentication authentication,
                                     boolean withHidden,
-                                    boolean withRemoved) throws UserNotFoundException {
+                                    boolean withRemoved) throws UserNotFoundException, ItemNotFoundException {
         User user = databaseUser(repository, authentication);
         user.constructItem(withHidden, withRemoved);
         return user;
@@ -104,13 +105,13 @@ public class User {
         return user.information.verify;
     }
 
-    public void constructItem(boolean withHidden, boolean withRemoved) {
+    public void constructItem(boolean withHidden, boolean withRemoved) throws ItemNotFoundException {
         rootItem = (generateItemStruct(withHidden, withRemoved));
     }
 
     @JsonIgnore
     @Transient
-    public Map<String, Item> removedItems() {
+    public Map<String, Item> removedItems() throws ItemNotFoundException {
         if (flatRemovedItems == null) {
             flatRemovedItems = new HashMap<>();
             constructItem(true, true);
@@ -120,13 +121,13 @@ public class User {
         return flatRemovedItems;
     }
 
-    private Item generateItemStruct(boolean withHidden, boolean withRemoved) {
+    private Item generateItemStruct(boolean withHidden, boolean withRemoved) throws ItemNotFoundException {
         Item rootParent = Item.RootParentItem();
         //在此处筛选。后续可不用传递数据
         Set<Item> filteredItems = seizedFiles.stream().filter(item ->
         {
             // 没有显示隐藏且为隐藏文件           没有显示移除且被移除
-            return (withHidden || !item.hidden) && (withRemoved || !item.getRemoved());
+            return (withHidden || !item.getHidden()) && (withRemoved || !item.getRemoved());
         }).collect(Collectors.toSet());
 
         rootParent.getAllSUbItemFromSet(filteredItems);
@@ -136,7 +137,7 @@ public class User {
             root.generateSubStruct(filteredItems);
             return root;
         } else {
-            return Item.RootItem(null);
+            throw new ItemNotFoundException("Root");
         }
     }
 
