@@ -1,5 +1,6 @@
 package com.jacky.imagecloud.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +24,10 @@ import javax.servlet.http.HttpServletRequest;
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     UserRepository userRepository;
-    PasswordEncoder encoder = new BCryptPasswordEncoder();
+    @Autowired
+    PasswordEncoder encoder;
+    @Autowired
+    ObjectMapper mapper;
     LoggerHandle logger = LoggerHandle.newLogger(WebSecurityConfig.class);
 
     @Override
@@ -78,8 +82,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .usernameParameter("uid")
                 .passwordParameter("paswd")
 
-                .successHandler(new LoginSuccessHandle(logger))
-                .failureHandler(new LoginFailureHandle(logger))
+                .successHandler(new LoginSuccessHandle(logger,mapper))
+                .failureHandler(new LoginFailureHandle(logger,mapper))
                 .permitAll()
                 .and()
 

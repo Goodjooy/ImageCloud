@@ -1,7 +1,9 @@
 package com.jacky.imagecloud.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jacky.imagecloud.data.Info;
 import com.jacky.imagecloud.data.LoggerHandle;
+import com.jacky.imagecloud.data.Result;
 import org.slf4j.Logger;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -14,8 +16,11 @@ import java.io.IOException;
 
 public class LoginSuccessHandle implements AuthenticationSuccessHandler {
     LoggerHandle logger;
-    public LoginSuccessHandle(LoggerHandle logger){
+    private final ObjectMapper mapper;
+
+    public LoginSuccessHandle(LoggerHandle logger,ObjectMapper mapper){
         this.logger = logger;
+        this.mapper = mapper;
     }
     /**
      * Called when a user has been successfully authenticated.
@@ -53,9 +58,11 @@ public class LoginSuccessHandle implements AuthenticationSuccessHandler {
         logger.authenticationSuccess(authentication.getName(),Info.of("Finish Authentication","message"));
 
         response.setHeader("Content-Type", "application/json");
+
+
         var writer=response.getWriter();
         writer.print(
-                "{\"data\":true,\"message\":\"\",\"err\":false}"
+                mapper.writeValueAsString(Result.okResult(true))
         );
     }
 }

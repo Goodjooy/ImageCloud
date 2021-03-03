@@ -15,9 +15,11 @@ import java.io.IOException;
 
 public class LoginFailureHandle implements AuthenticationFailureHandler {
     LoggerHandle logger;
+    private final ObjectMapper mapper;
 
-    public LoginFailureHandle(LoggerHandle logger) {
+    public LoginFailureHandle(LoggerHandle logger ,ObjectMapper mapper) {
         this.logger = logger;
+        this.mapper = mapper;
     }
 
     /**
@@ -36,7 +38,6 @@ public class LoginFailureHandle implements AuthenticationFailureHandler {
         logger.authenticationFailure(request.getParameter("uid"),exception);
         var writer = response.getWriter();
 
-        ObjectMapper mapper=new ObjectMapper();
         Result<?> result=Result.failureResult(exception);
         String str=mapper.writeValueAsString(result);
 
