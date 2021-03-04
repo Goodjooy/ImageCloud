@@ -26,15 +26,6 @@ public class TestController {
         throw new NullPointerException("ababab");
     }
 
-    @ExceptionHandler(Throwable.class)
-    @ResponseBody
-    public Result<Throwable> handleException(
-            ServletRequest request,
-            Throwable exception
-    ) {
-        //logger.error(exception);
-        return Result.exceptionResult(exception, request);
-    }
     @GetMapping("/sign-in")
     public String getSignInPage() {
         return "sign_in";

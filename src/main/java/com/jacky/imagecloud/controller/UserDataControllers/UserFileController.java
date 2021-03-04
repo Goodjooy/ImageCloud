@@ -257,9 +257,9 @@ public class UserFileController {
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
         logger.dataAccept(Info.of(oldFilePath, "Old Path"));
         try {
-            User user=User.databaseUser(userRepository,authentication);
+            User user=User.databaseUser(userRepository,authentication,true,false);
             var target=user.rootItem.getTargetItem(oldFilePath,true);
-            if (user.targetItemNameSupport(newName,target.getParentID()))
+            if (!user.targetItemNameSupport(newName,target.getParentID()))
                 throw new ItemExistException(oldFilePath.substring(0,oldFilePath.lastIndexOf("/")),newName);
 
             target.setItemName(newName);
@@ -271,7 +271,7 @@ public class UserFileController {
             return Result.okResult(newName);
 
         } catch (BaseException | BaseRuntimeException e) {
-            logger.operateFailure("Rename File",
+            logger.operateFailure("Rename File",e,
                     authentication,
                     Info.of(oldFilePath, "oldName"),
                     Info.of(newName, "newName"));
@@ -327,7 +327,7 @@ public class UserFileController {
             var user = User.databaseUser(userRepository, authentication, true, true);
             var target = user.rootItem.getTargetItem(targetPath, true);
             user.constructItem(true,false);
-            if(user.targetItemNameSupport(target.getItemName(),target.getParentID()))
+            if(!user.targetItemNameSupport(target.getItemName(),target.getParentID()))
                 throw new ItemExistException(targetPath);
 
             target.setRemoved(false);
