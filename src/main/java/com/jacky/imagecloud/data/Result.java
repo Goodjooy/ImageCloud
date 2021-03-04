@@ -39,7 +39,7 @@ public class Result<DATA> {
         return new Result<>(null, true, message);
     }
 
-    public static <T> Result<T> failureResult(Exception e) {
+    public static <T ,E extends Throwable> Result<T> failureResult(E e) {
         return new Result<>(null, true, String.format("Exception<%s>: %s", e.getClass().getName(), e.getMessage()), e);
     }
 

@@ -15,17 +15,13 @@ import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileNotFoundException;
-import java.nio.file.FileAlreadyExistsException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -90,39 +86,60 @@ public class UserFileController {
     }
 
     @PostMapping(path = "/file")
-    public Result<Boolean> uploadFile(Authentication authentication,
+    public Result<List<Result<Boolean>>> uploadFile(Authentication authentication,
                                       @RequestParam(name = "path") String path,
-                                      @RequestParam(name = "file") MultipartFile file,
+                                      @RequestParam(name = "file") MultipartFile[] files,
                                       @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
+            logger.dataAccept(Info.of(Arrays.stream(files)
+                    .map(file -> file==null?"unknown": file.getOriginalFilename()).collect(Collectors.toList()),
+                    "Files"));
+
             var user = User.databaseUser(userRepository, authentication,
                     true, false);
 
-            if (user.information.availableSize() < file.getSize())
-                throw new UserSpaceNotEnoughException(user.information.availableSize(), file.getSize());
-            if (file.isEmpty())
-                throw new EmptyFileException(file);
-
             Item last = appendNotExistItems(user, path, hidden, true);
-            var lastItem = Item.FileItem(user, last, file.getOriginalFilename(), hidden);
-            var fileStorage = fileUploader.storage(file);
-            fileStorage.item = lastItem;
-            lastItem.file = fileStorage;
+            Function<MultipartFile,Result<Boolean>>handle=file-> {
+                try {
 
-            user.addItem(lastItem);
-            user.information.AppendSize(file.getSize());
+                    var lastItem = Item.FileItem(user, last, file.getOriginalFilename(), hidden);
 
-            fileStorageRepository.save(fileStorage);
-            itemRepository.save(lastItem);
-            userRepository.save(user);
+                    if (file.isEmpty()) {
+                        throw new EmptyFileException(file);
+                    }
+                    if (user.information.availableSize() < file.getSize()) {
+                        throw new UserSpaceNotEnoughException(user.information.availableSize(), file.getSize());
+                    }
 
-            logger.uploadSuccess(user, file, path, Info.of(hidden, "hidden"));
-            return Result.okResult(true);
-        } catch (Exception e) {
-            logger.operateFailure("Upload File Failure", e, authentication,
+                    var fileStorage = fileUploader.storage(file);
+                    fileStorage.item = lastItem;
+                    lastItem.file = fileStorage;
+
+                    user.addItem(lastItem);
+                    user.information.AppendSize(file.getSize());
+
+                    fileStorageRepository.save(fileStorage);
+                    itemRepository.save(lastItem);
+                    userRepository.save(user);
+
+                    logger.uploadSuccess(user, file, path, Info.of(hidden, "hidden"));
+                    return Result.okResult(true);
+                }catch (BaseException |BaseRuntimeException e){
+                    logger.operateFailure("Upload File Failure",
+                            e,
+                            Info.of(user,"User"),
+                            Info.of(Objects.requireNonNull(file.getOriginalFilename()),"fileName"),
+                            Info.of(path,"SavePath"),
+                            Info.of(hidden, "hidden"));
+                    return Result.okResult(true);
+                }
+            };
+            return Result.okResult(Arrays.stream(files).map(handle).collect(Collectors.toList()));
+        } catch (BaseException|BaseRuntimeException e) {
+            logger.operateFailure("Upload File", e, authentication,
                     Info.of(path, "Path"),
-                    Info.of(Objects.requireNonNull(file.getOriginalFilename()), "fileName"),
+                    Info.of(Arrays.stream(files).map(MultipartFile::getOriginalFilename).collect(Collectors.toList()), "filesName"),
                     Info.of(hidden, "hidden")
             );
             fileOperateCheck();
@@ -132,12 +149,14 @@ public class UserFileController {
 
 
     @DeleteMapping(path = "/file")
-    public Result<List<Result<Boolean>>> deleteFile(Authentication authentication,
-                                                    @RequestParam(name = "path", defaultValue = "/root") String[] paths,
-                                                    @RequestParam(name = "flat", defaultValue = "true") boolean flatRemove,
-                                                    @RequestParam(name = "paswd", defaultValue = "") String password,
-                                                    @RequestParam(name = "removeTargetDir", defaultValue = "false") boolean removeTargetDir
+    public Result<List<Result<Boolean>>> deleteFile(
+            Authentication authentication,
+            @RequestParam(name = "path") String[] paths,
+            @RequestParam(name = "flat", defaultValue = "true") boolean flatRemove,
+            @RequestParam(name = "paswd") String password,
+            @RequestParam(name = "removeTargetDir", defaultValue = "false") boolean removeTargetDir
     ) {
+        var a = SecurityContextHolder.getContext();
         logger.dataAccept(Info.of(List.of(paths), "targetPaths"));
 
         //如果结尾为文件，删除文件，如果结尾为文件夹 删除所有子文件夹和文件。如果为/root,报错
@@ -149,15 +168,14 @@ public class UserFileController {
             var rootItem = user.rootItem;
             Stream<Result<Boolean>> result = Stream.of(paths).map(path ->
             {
-                if (path.equals("/root")) return Result.failureResult("can not remove /root dir");
                 Item target;
                 try {
+                    if (path.equals("/root"))
+                        throw new RootDeleteException();
+
                     target = rootItem.getTargetItem(path, true);
-
                     var subItems = target.transformSubItemsToList();
-
                     subItemDeleter(subItems, flatRemove);
-
                     if (target.getItemType() == ItemType.FILE) {
                         deleteItem(target, flatRemove);
                         userRepository.save(user);
@@ -174,7 +192,7 @@ public class UserFileController {
                             Info.of(removeTargetDir, "removeTargetDir"));
 
                     return Result.okResult(true);
-                } catch ( BaseException | BaseRuntimeException e) {
+                } catch (BaseException | BaseRuntimeException e) {
                     logger.operateFailure("Remove One Item In All Item", e, authentication,
                             Info.of(path, "targetPath"),
                             Info.of(flatRemove, "flatRemove"),
@@ -212,7 +230,7 @@ public class UserFileController {
 
     @PostMapping(path = "/dir")
     public Result<Boolean> createDir(Authentication authentication,
-                                     @RequestParam(name = "path", defaultValue = "/root") String path,
+                                     @RequestParam(name = "path") String path,
                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
         try {
             var user = User.databaseUser(userRepository, authentication, true, false);
@@ -233,29 +251,31 @@ public class UserFileController {
 
     @PostMapping(path = "/rename")
     public Result<String> fileRename(Authentication authentication,
-                                     @RequestParam(name = "oldPath", defaultValue = "/root") String oldFilePath,
+                                     @RequestParam(name = "oldPath") String oldFilePath,
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
+        logger.dataAccept(Info.of(oldFilePath, "Old Path"));
+
         var temp = getFile(authentication, oldFilePath, true, ItemSort.name, false);
         if (!temp.err) {
             temp.data.setItemName(newName);
             itemRepository.save(temp.data);
 
-            logger.userOperateFailure(authentication.getName(), "Rename File",
+            logger.userOperateSuccess(authentication.getName(), "Rename File",
                     Info.of(oldFilePath, "oldName"),
                     Info.of(newName, "newName"));
             return Result.okResult(newName);
         }
-        logger.operateFailure("Change File Name",
+        logger.operateFailure("Rename File",
                 authentication,
                 Info.of(oldFilePath, "oldName"),
                 Info.of(newName, "newName"));
-        return Result.failureResult(temp.message);
+        return Result.failureResult(temp.e);
     }
 
     @PostMapping(path = "/file-status")
     public Result<List<Result<Boolean>>> fileStatusChange(
             Authentication authentication,
-            @RequestParam(name = "path", defaultValue = "/root") String[] targetPaths
+            @RequestParam(name = "path") String[] targetPaths
     ) {
         logger.dataAccept(Info.of(List.of(targetPaths), "TargetPathToChangeHiddenStatus"));
         try {
@@ -294,7 +314,7 @@ public class UserFileController {
     @PostMapping(path = "/restore-file")
     public Result<Boolean> restoreFile(
             Authentication authentication,
-            @RequestParam(name = "path", defaultValue = "/root") String targetPath
+            @RequestParam(name = "path") String targetPath
     ) {
         try {
             var user = User.databaseUser(userRepository, authentication, true, true);
@@ -357,7 +377,7 @@ public class UserFileController {
     }
 
     private void deleteItem(Item item, boolean flatRemove) throws RootDeleteException {
-        if(item.isRootItem())
+        if (item.isRootItem())
             throw new RootDeleteException();
 
         var user = item.getUser();
