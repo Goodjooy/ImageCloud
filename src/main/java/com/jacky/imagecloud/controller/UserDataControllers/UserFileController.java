@@ -212,6 +212,8 @@ public class UserFileController {
 
     }
 
+
+
     @GetMapping(path = "/remove-trees")
     public Result<Map<String, Item>> getRemovedItems(Authentication authentication) {
         try {
@@ -254,22 +256,27 @@ public class UserFileController {
                                      @RequestParam(name = "oldPath") String oldFilePath,
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
         logger.dataAccept(Info.of(oldFilePath, "Old Path"));
+        try {
+            User user=User.databaseUser(userRepository,authentication);
+            var target=user.rootItem.getTargetItem(oldFilePath,true);
+            if (user.targetItemNameSupport(newName,target.getParentID()))
+                throw new ItemExistException(oldFilePath.substring(0,oldFilePath.lastIndexOf("/")),newName);
 
-        var temp = getFile(authentication, oldFilePath, true, ItemSort.name, false);
-        if (!temp.err) {
-            temp.data.setItemName(newName);
-            itemRepository.save(temp.data);
+            target.setItemName(newName);
+            itemRepository.save(target);
 
             logger.userOperateSuccess(authentication.getName(), "Rename File",
                     Info.of(oldFilePath, "oldName"),
                     Info.of(newName, "newName"));
             return Result.okResult(newName);
+
+        } catch (BaseException | BaseRuntimeException e) {
+            logger.operateFailure("Rename File",
+                    authentication,
+                    Info.of(oldFilePath, "oldName"),
+                    Info.of(newName, "newName"));
+            return Result.failureResult(e);
         }
-        logger.operateFailure("Rename File",
-                authentication,
-                Info.of(oldFilePath, "oldName"),
-                Info.of(newName, "newName"));
-        return Result.failureResult(temp.e);
     }
 
     @PostMapping(path = "/file-status")
@@ -319,6 +326,9 @@ public class UserFileController {
         try {
             var user = User.databaseUser(userRepository, authentication, true, true);
             var target = user.rootItem.getTargetItem(targetPath, true);
+            user.constructItem(true,false);
+            if(user.targetItemNameSupport(target.getItemName(),target.getParentID()))
+                throw new ItemExistException(targetPath);
 
             target.setRemoved(false);
             userRepository.save(user);

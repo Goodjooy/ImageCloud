@@ -178,9 +178,9 @@ public class SecurityController {
             if (check.err)
                 throw new EmailAddressNotSupportException(emailAddress, check.e);
             if (passWord.length() < 6 || passWord.length() > 32)
-                throw new BadNewUserInformationException("Password Length Out Of Range [6, 32]");
+                throw new BadUserInformationException("Password Length Out Of Range [6, 32]");
             if (name.length() > 16 || name.length() == 0)
-                throw new BadNewUserInformationException("User Name Length Out Of Range [1,16]");
+                throw new BadUserInformationException("User Name Length Out Of Range [1,16]");
 
             User user = User.newUser(name, encoder.encode(passWord), emailAddress);
             userRepository.save(user);
@@ -190,7 +190,7 @@ public class SecurityController {
                     Info.of(name, "UserName"),
                     Info.of(passWord, "RawPassword"));
             return Result.okResult(true);
-        } catch (EmailAddressNotSupportException | BadNewUserInformationException e) {
+        } catch (EmailAddressNotSupportException | BadUserInformationException e) {
             logger.securityOperateFailure("Sign Up New User", e,
                     Info.of(emailAddress, "UserEmail"),
                     Info.of(name, "UserName"),

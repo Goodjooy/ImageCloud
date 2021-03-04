@@ -7,6 +7,8 @@ import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
 import com.jacky.imagecloud.data.VerifyCodeContainer;
 import com.jacky.imagecloud.email.EmailSender;
+import com.jacky.imagecloud.err.BaseException;
+import com.jacky.imagecloud.err.BaseRuntimeException;
 import com.jacky.imagecloud.err.file.StorageException;
 import com.jacky.imagecloud.err.user.*;
 import com.jacky.imagecloud.models.users.User;
@@ -20,6 +22,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -190,6 +193,31 @@ public class UserInformationController {
             throw new VerifyFailureException(verifyCode);
         } catch (Exception e) {
             logger.userOperateFailure(authentication.getName(), "Verify Email", e);
+            return Result.failureResult(e);
+        }
+    }
+
+    @PostMapping("/rename")
+    public Result<String> renameUser(
+            @RequestParam(name = "newName") String newName
+    ) {
+        try {
+            User user = User.databaseUser(userRepository);
+            String userOldName = user.name;
+            user.setUserName(newName);
+
+            userRepository.save(user);
+
+            logger.userOperateSuccess(user, "User Rename",
+                    Info.of(userOldName, "OldName"),
+                    Info.of(user.name, "NewName"));
+            return Result.okResult(user.toString());
+        } catch (BaseException | BaseRuntimeException e) {
+            logger.userOperateFailure(SecurityContextHolder.getContext().getAuthentication().getName(),
+                    "User Rename", e,
+                    Info.of(SecurityContextHolder.getContext().getAuthentication().getName(), "OldName"),
+                    Info.of(newName, "NewName"));
+
             return Result.failureResult(e);
         }
     }

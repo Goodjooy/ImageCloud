@@ -297,6 +297,8 @@ public class Item {
     }
 
     public void setItemName(String itemName) {
+
+
         if (time != null)
             time.modified();
         this.itemName = itemName;

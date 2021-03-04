@@ -188,6 +188,12 @@
       | :--: | :-----: | :-----: | :--: | :-----: | :------: |
       | GET |   null   | null | 发送邮箱验证到用户邮箱 | USER |```Result<Boolean>``` |
      | POST | code={*verifyCode*} | code->邮箱验证码 | 检查验证码，更新用户验证状态 | USER |```Result<Boolean>```|
+* ```/rename```
+  * 用户重命名
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
+      | :--: | :--: | :--: | :--: | :--: |:------: |
+      | POST | newName={*newUserName*} | newName->用户新名字 | 更换用户用户名 | USER |```Result<String>```|
 
 ---
 
@@ -265,4 +271,35 @@
 
 ## 异常描述
 
-* `EmptyFileException`  
+* File System Exception
+  | 异常名称 | 异常触发条件 |
+  | :-----: | :---------: |
+  | `EmptyFileException` | 上传文件为空 |
+  | `FileFormatNotSupportException` | 上传文件的扩展名不支持 |
+  | `ImageSizeNotSupport` | 头像的缩放尺寸不支持 |
+  | `StorageException` | 保存文件异常 |
+  | `StorageFileNotFoundException` | 保存在服务器的文件没找到 |
+* Item Exception
+  | 异常名称 | 异常触发条件 |
+  | :-----: | :---------: |
+  | `ItemExistException` | 新建文件夹目标文件夹已经存在,恢复文件/文件夹时目录中有同名未删除的文件夹,重命名文件/文件夹时同目录下有同名文件/文件夹 |
+  | `ItemNotFoundException` | 指定路径不存在 |
+  | `RootDeleteException` | 请求删除`/rrot`目录 |
+  | `RootPathCanNotBeHiddenException` | 请求隐藏`/root`目录 |
+  | `RootPathNotExistException` | 根目录`/root`不存在 |
+  | `UnknownItemTypeException` | 未知的`item`类型 |
+
+* User Exception
+  | 异常名称 | 异常触发条件 |
+  | :-----: | :---------: |
+  | `BadUserInformationException` | 不符合要求的用户信息（包括密码长度，用户名长度） |
+  | `EmailAddressNotSupportException` | 不支持的邮箱地址{邮箱格式错误，邮箱已经被使用} |
+  | `NotAllowRequestException` | 用户无权访问目标内容 |
+  | `NotEnoughTimeBetweenDifferentVerifyCodeGenerationException` | 发送验证码间隔时间过短(<60s>) |
+  | `ResetPasswordFailureException` | 重置密码失败{旧密码错误} |
+  | `SamePasswordException` | 新旧密码一致 |
+  | `UserNotFoundException` | 没找到目标用户 |
+  | `UserNotVerifiedException` | 用户未进行邮箱验证 |
+  | `UserSpaceNotEnoughException` | 用户剩余存储空间不足 |
+  | `UserVerifiedException` | 用户已经验证 |
+  | `VerifyFailureException` | 用户验证失败 |

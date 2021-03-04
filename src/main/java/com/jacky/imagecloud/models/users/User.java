@@ -2,10 +2,13 @@ package com.jacky.imagecloud.models.users;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jacky.imagecloud.err.item.ItemNotFoundException;
+import com.jacky.imagecloud.err.user.BadUserInformationException;
+import com.jacky.imagecloud.err.user.EmailAddressNotSupportException;
 import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.models.items.Item;
 import org.springframework.data.domain.Example;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.persistence.*;
 import java.util.HashMap;
@@ -71,6 +74,10 @@ public class User {
         return user;
     }
 
+    public static User databaseUser(UserRepository repository) throws UserNotFoundException {
+        var authentication=SecurityContextHolder.getContext().getAuthentication();
+        return databaseUser(repository,authentication);
+    }
     public static User databaseUser(UserRepository repository,
                                     String emailAddress) throws UserNotFoundException {
         User user = authUser(emailAddress);
@@ -103,6 +110,15 @@ public class User {
     public static boolean verifiedUser(UserRepository repository, String emailAddress) throws UserNotFoundException {
         User user = databaseUser(repository,emailAddress);
         return user.information.verify;
+    }
+
+    public static void userNameCheck(String name) throws BadUserInformationException {
+        if (name.length() > 16 || name.length() == 0)
+            throw new BadUserInformationException("User Name Length Out Of Range [1,16]");
+    }
+    public static void userPasswordCheck(String password) throws BadUserInformationException {
+        if (password.length() < 6 || password.length() > 32)
+            throw new BadUserInformationException("Password Length Out Of Range [6, 32]");
     }
 
     public void constructItem(boolean withHidden, boolean withRemoved) throws ItemNotFoundException {
@@ -150,6 +166,19 @@ public class User {
             seizedFiles = new HashSet<>();
         }
         seizedFiles.add(item);
+    }
+
+    public void setUserName(String name) throws BadUserInformationException {
+        userNameCheck(name);
+        this.name=name;
+    }
+
+    public boolean targetItemNameSupport(String name,int parentId){
+        var result=seizedFiles.stream().
+                filter(item -> item.getParentID()==parentId).
+                filter(item -> item.getItemName().equals(name));
+
+        return result.count() <= 0;
     }
 
     @Override
