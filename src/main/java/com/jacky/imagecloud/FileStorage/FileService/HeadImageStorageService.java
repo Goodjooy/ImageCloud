@@ -54,8 +54,10 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         if (file.getOriginalFilename() == null)
             throw new StorageException("Failed to store file with empty file name");
 
+        var newImage=UserImage.generateNameImage();
+
         var filename = file.getOriginalFilename();
-        var generateName = image.getFileName().split("\\.")[0];
+        var generateName = newImage.getFileName().split("\\.")[0];
         var fileFormat = filename.substring(filename.lastIndexOf(".") + 1);
 
         if (!List.of(ImageIO.getReaderFormatNames()).contains(fileFormat))
@@ -63,8 +65,6 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         var SaveFilename = String.format("%s.%s", generateName, fileFormat);
         var savePath = localPath.resolve(Path.of(SaveFilename)).normalize().toAbsolutePath();
 
-        image.setFileName(SaveFilename);
-        image.setSetHeaded(true);
         try {
             var img = ImageProcess.ImageReader(file.getInputStream(),file.getOriginalFilename());
             var splitLen = Math.min(img.getWidth(), img.getHeight());
@@ -75,7 +75,11 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
                     SplitImage, 512
             );
             ImageProcess.BufferImageToFile(resizedImage, fileFormat, savePath.toFile());
-            return image;
+
+            delete(image.getFileName());
+            newImage.setFileName(SaveFilename);
+            newImage.setSetHeaded(true);
+            return newImage;
         } catch (IOException e) {
             throw new StorageException("Failure to store file", e);
         }
@@ -100,8 +104,6 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
     }
 
     public Resource loadAsResource(String filePath, int size) {
-
-
         if (!sizeRange.contains(size))
             throw new ImageSizeNotSupport(String.format("size<%s> not in range <%s>", size, sizeRange));
         var filename = load(filePath);

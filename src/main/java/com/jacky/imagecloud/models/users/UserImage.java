@@ -101,4 +101,13 @@ public class UserImage {
     public void setSetHeaded(Boolean setHeaded) {
         this.setHeaded = setHeaded;
     }
+
+    @Override
+    public String toString() {
+        return "UserImage{" +
+                "user=" + user +
+                ", setHeaded=" + setHeaded +
+                ", fileName='" + fileName + '\'' +
+                '}';
+    }
 }

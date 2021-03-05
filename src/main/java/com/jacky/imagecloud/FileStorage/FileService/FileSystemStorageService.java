@@ -73,6 +73,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         //图像压缩比计算
         var ThumbnailImage = ImageProcess.transformImage(
                 new ByteArrayInputStream(copyStream.toByteArray()), fileName, (int) maxSize);
+
         var RawPath = rootRawLocation.resolve(
                 Path.of(Objects.requireNonNull(fileName))
         ).normalize().toAbsolutePath();
@@ -85,7 +86,8 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             throw new StorageException("Cannot store file outside current directory.");
 
         Files.copy(new ByteArrayInputStream(copyStream.toByteArray()), RawPath, StandardCopyOption.REPLACE_EXISTING);
-        ImageIO.write(ThumbnailImage, fileExtra, ThumbnailPath.toFile());
+        ImageProcess.BufferImageToFile(ThumbnailImage,fileExtra,ThumbnailPath.toFile());
+
     }
 
     @Override
@@ -171,7 +173,9 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             } else {
                 Path RawFile = load(filename);
                 var Image = ImageProcess.transformImage(RawFile.toFile(), (int) maxSize);
+
                 ImageProcess.BufferImageToFile(Image, ImageProcess.getFileFormat(file), file.toFile());
+
                 return new OutputStreamResource(ImageProcess.BufferImageToOutputStream(Image,
                         ImageProcess.getFileFormat(filename)), file);
             }

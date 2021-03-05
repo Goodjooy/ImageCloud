@@ -106,11 +106,11 @@ public class UserInformationController {
                 image = storageService.storage(file, user.image);
             else
                 image = storageService.storage(file);
-            user.image.combineImage(image);
+            user.image=image;
             image.setUser(user);
 
+            logger.dataAccept(Info.of(image,"User Image"));
             userRepository.save(user);
-
             logger.userOperateSuccess(user, "Upload Head Image",
                     Info.of(file.getOriginalFilename(), "Image Name"));
             return Result.okResult(true);
