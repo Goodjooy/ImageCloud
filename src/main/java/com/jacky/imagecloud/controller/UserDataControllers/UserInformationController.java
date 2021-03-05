@@ -106,7 +106,7 @@ public class UserInformationController {
                 image = storageService.storage(file, user.image);
             else
                 image = storageService.storage(file);
-            user.image=image;
+            user.image.combineImage(image);
             image.setUser(user);
 
             logger.dataAccept(Info.of(image,"User Image"));

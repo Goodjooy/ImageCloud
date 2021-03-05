@@ -86,8 +86,10 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
             throw new StorageException("Cannot store file outside current directory.");
 
         Files.copy(new ByteArrayInputStream(copyStream.toByteArray()), RawPath, StandardCopyOption.REPLACE_EXISTING);
-        ImageProcess.BufferImageToFile(ThumbnailImage,fileExtra,ThumbnailPath.toFile());
-
+        var status=ImageProcess.BufferImageToFile(ThumbnailImage,fileExtra,ThumbnailPath.toFile());
+        if (!status){
+            throw new StorageException("Save Thumbnail File Fail");
+        }
     }
 
     @Override
@@ -174,7 +176,9 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
                 Path RawFile = load(filename);
                 var Image = ImageProcess.transformImage(RawFile.toFile(), (int) maxSize);
 
-                ImageProcess.BufferImageToFile(Image, ImageProcess.getFileFormat(file), file.toFile());
+                var status= ImageProcess.BufferImageToFile(Image, ImageProcess.getFileFormat(file), file.toFile());
+                if (!status)
+                    throw new StorageException("failure to generate Thumbnail Image");
 
                 return new OutputStreamResource(ImageProcess.BufferImageToOutputStream(Image,
                         ImageProcess.getFileFormat(filename)), file);

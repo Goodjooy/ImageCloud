@@ -100,23 +100,23 @@ public class ImageProcess {
 
     public static ByteArrayOutputStream BufferImageToOutputStream(BufferedImage image, String fileFormat) throws IOException {
         var Output = new ByteArrayOutputStream();
-        var status=ImageIO.write(image, fileFormat, Output);
-        if(!status && (fileFormat.equalsIgnoreCase("jpg")||fileFormat.equalsIgnoreCase("jpeg"))
-        ){
-            var newImage= new BufferedImage(image.getWidth(),image.getHeight(),BufferedImage.TYPE_INT_RGB);
-            newImage.getGraphics().drawImage(image,0,0,null);
+        var status = ImageIO.write(image, fileFormat, Output);
+        if (!status && (fileFormat.equalsIgnoreCase("jpg") || fileFormat.equalsIgnoreCase("jpeg"))
+        ) {
+            var newImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+            newImage.getGraphics().drawImage(image, 0, 0, null);
             ImageIO.write(newImage, fileFormat, Output);
         }
         return Output;
     }
 
     public static boolean BufferImageToFile(BufferedImage image, String fileFormat, File file) throws IOException {
-        var status= ImageIO.write(image, fileFormat, file);
-        if(!status && (fileFormat.equalsIgnoreCase("jpg")||fileFormat.equalsIgnoreCase("jpeg"))
-        ){
-            var newImage= new BufferedImage(image.getWidth(),image.getHeight(),BufferedImage.TYPE_INT_RGB);
-            newImage.getGraphics().drawImage(image,0,0,null);
-            status=ImageIO.write(newImage, fileFormat, file);
+        var status = ImageIO.write(image, fileFormat, file);
+        if (!status && (fileFormat.equalsIgnoreCase("jpg") || fileFormat.equalsIgnoreCase("jpeg"))
+        ) {
+            var newImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+            newImage.getGraphics().drawImage(image, 0, 0, null);
+            status = ImageIO.write(newImage, fileFormat, file);
         }
         return status;
     }
