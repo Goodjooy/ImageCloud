@@ -8,7 +8,7 @@ import javax.servlet.http.HttpServletRequest;
 public class Result<DATA> {
     public final DATA data;
     public final boolean err;
-    public final String message;
+    public String message;
     @JsonIgnore
     public final Throwable e;
 
@@ -41,11 +41,19 @@ public class Result<DATA> {
     }
 
     public static <T ,E extends Throwable> Result<T> failureResult(E e) {
-        return new Result<>(null, true, String.format("Exception<%s>: %s", e.getClass().getName(), e.getMessage()), e);
+        var eNames=e.getClass().getName().split("\\.");
+        var name="";
+        if (!(eNames.length ==0)){
+            name=eNames[eNames.length-1];
+        }
+
+        return new Result<>(null, true, String.format("Exception<%s>: %s", name, e.getMessage()), e);
     }
     public static <T,E extends Throwable> Result<T> exceptionCatchResult(E e, HttpServletRequest request){
-        return new Result<>(null,true,String.format("Exception<%s>: %s | while Request URL: %s | %s",
-                e.getClass().getName(), e.getMessage(),request.getRequestURI(),request.getMethod()));
+        Result<T> t= Result.failureResult(e);
+        t.message+=String.format(" | while Request URL: %s | %s | IP[%s]",request.getRequestURI(),request.getMethod(),
+                request.getRemoteAddr());
+        return t;
     }
 
     public static <T extends Throwable> Result<T> exceptionResult(T exception, ServletRequest request) {
