@@ -6,6 +6,7 @@ import com.jacky.imagecloud.err.BaseRuntimeException;
 import com.jacky.imagecloud.models.items.Item;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
+import org.apache.catalina.connector.ClientAbortException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -41,9 +42,9 @@ public class LoggerHandle {
     }
 
     public void error(String message, Throwable e) {
-        if(e==null)
+        if (e == null)
             logger.error(message);
-        if (e instanceof BaseException || e instanceof BaseRuntimeException) {
+        if (e instanceof BaseException || e instanceof BaseRuntimeException || e instanceof ClientAbortException) {
             logger.error(message + "| Exception<" + e.getClass().getName() + ">: " + e.getMessage());
         } else
             logger.error(message, e);
@@ -181,6 +182,7 @@ public class LoggerHandle {
                 , extraInformation(extraInfo)
         ), throwable);
     }
+
     public void storageFileOperateFailure(Throwable throwable, ServletRequest request, ServletResponse response, Info<?>... extraInfo) {
 
         error(String.format(

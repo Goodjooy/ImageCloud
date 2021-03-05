@@ -87,20 +87,20 @@ public class UserFileController {
 
     @PostMapping(path = "/file")
     public Result<List<Result<Boolean>>> uploadFile(Authentication authentication,
-                                      @RequestParam(name = "path") String path,
-                                      @RequestParam(name = "file") MultipartFile[] files,
-                                      @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
+                                                    @RequestParam(name = "path") String path,
+                                                    @RequestParam(name = "file") MultipartFile[] files,
+                                                    @RequestParam(name = "hidden", defaultValue = "false") Boolean hidden) {
 
         try {
             logger.dataAccept(Info.of(Arrays.stream(files)
-                    .map(file -> file==null?"unknown": file.getOriginalFilename()).collect(Collectors.toList()),
+                            .map(file -> file == null ? "unknown" : file.getOriginalFilename()).collect(Collectors.toList()),
                     "Files"));
 
             var user = User.databaseUser(userRepository, authentication,
                     true, false);
 
             Item last = appendNotExistItems(user, path, hidden, true);
-            Function<MultipartFile,Result<Boolean>>handle=file-> {
+            Function<MultipartFile, Result<Boolean>> handle = file -> {
                 try {
 
                     var lastItem = Item.FileItem(user, last, file.getOriginalFilename(), hidden);
@@ -125,18 +125,18 @@ public class UserFileController {
 
                     logger.uploadSuccess(user, file, path, Info.of(hidden, "hidden"));
                     return Result.okResult(true);
-                }catch (BaseException |BaseRuntimeException e){
+                } catch (BaseException | BaseRuntimeException e) {
                     logger.operateFailure("Upload File Failure",
                             e,
-                            Info.of(user,"User"),
-                            Info.of(Objects.requireNonNull(file.getOriginalFilename()),"fileName"),
-                            Info.of(path,"SavePath"),
+                            Info.of(user, "User"),
+                            Info.of(Objects.requireNonNull(file.getOriginalFilename()), "fileName"),
+                            Info.of(path, "SavePath"),
                             Info.of(hidden, "hidden"));
                     return Result.okResult(true);
                 }
             };
             return Result.okResult(Arrays.stream(files).map(handle).collect(Collectors.toList()));
-        } catch (BaseException|BaseRuntimeException e) {
+        } catch (BaseException | BaseRuntimeException e) {
             logger.operateFailure("Upload File", e, authentication,
                     Info.of(path, "Path"),
                     Info.of(Arrays.stream(files).map(MultipartFile::getOriginalFilename).collect(Collectors.toList()), "filesName"),
@@ -213,7 +213,6 @@ public class UserFileController {
     }
 
 
-
     @GetMapping(path = "/remove-trees")
     public Result<Map<String, Item>> getRemovedItems(Authentication authentication) {
         try {
@@ -257,21 +256,21 @@ public class UserFileController {
                                      @RequestParam(name = "newName", defaultValue = "") String newName) {
         logger.dataAccept(Info.of(oldFilePath, "Old Path"));
         try {
-            User user=User.databaseUser(userRepository,authentication,true,false);
-            var target=user.rootItem.getTargetItem(oldFilePath,true);
-            if (!user.targetItemNameSupport(newName,target.getParentID()))
-                throw new ItemExistException(oldFilePath.substring(0,oldFilePath.lastIndexOf("/")),newName);
+            User user = User.databaseUser(userRepository, authentication, true, false);
+            var target = user.rootItem.getTargetItem(oldFilePath, true);
+            if (!user.targetItemNameSupport(newName, target.getParentID()))
+                throw new ItemExistException(oldFilePath.substring(0, oldFilePath.lastIndexOf("/")), newName);
 
             target.setItemName(newName);
             itemRepository.save(target);
 
-            logger.userOperateSuccess(authentication.getName(), "Rename File",
+            logger.fileOperateSuccess(authentication.getName(), "Rename File",
                     Info.of(oldFilePath, "oldName"),
                     Info.of(newName, "newName"));
             return Result.okResult(newName);
 
         } catch (BaseException | BaseRuntimeException e) {
-            logger.operateFailure("Rename File",e,
+            logger.operateFailure("Rename File", e,
                     authentication,
                     Info.of(oldFilePath, "oldName"),
                     Info.of(newName, "newName"));
@@ -326,8 +325,8 @@ public class UserFileController {
         try {
             var user = User.databaseUser(userRepository, authentication, true, true);
             var target = user.rootItem.getTargetItem(targetPath, true);
-            user.constructItem(true,false);
-            if(!user.targetItemNameSupport(target.getItemName(),target.getParentID()))
+            user.constructItem(true, false);
+            if (!user.targetItemNameSupport(target.getItemName(), target.getParentID()))
                 throw new ItemExistException(targetPath);
 
             target.setRemoved(false);
@@ -365,11 +364,14 @@ public class UserFileController {
         var user = root.getUser();
         var groups = root.splitPath(path);
 
+        boolean exitTree = false;
+        Item t;
         Item temp = root;
         for (String p :
                 groups) {
-            var t = temp.findTargetItem(p, true);
-            if (t != null) {
+
+            t = temp.findTargetItem(p, true);
+            if (t != null && !items.contains(t)) {
                 items.add(t);
                 temp = t;
             } else {

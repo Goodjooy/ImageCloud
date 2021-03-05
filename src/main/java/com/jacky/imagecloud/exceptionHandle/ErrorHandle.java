@@ -2,10 +2,8 @@ package com.jacky.imagecloud.exceptionHandle;
 
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.data.Result;
+import org.apache.catalina.connector.ClientAbortException;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.handler.AbstractHandlerExceptionResolver;
@@ -18,7 +16,8 @@ import java.util.Objects;
 @Component
 public class ErrorHandle extends AbstractHandlerExceptionResolver {
 
-    LoggerHandle logger=LoggerHandle.newLogger(ErrorHandle.class);
+    LoggerHandle logger = LoggerHandle.newLogger(ErrorHandle.class);
+
     /**
      * Actually resolve the given exception that got thrown during handler execution,
      * returning a {@link ModelAndView} that represents a specific error page if appropriate.
@@ -40,15 +39,17 @@ public class ErrorHandle extends AbstractHandlerExceptionResolver {
                                               @NotNull HttpServletResponse response,
                                               Object handler,
                                               @NotNull Exception ex) {
-        String Url=request.getRequestURI();
-        logger.error(ex,"`Exception Catch` | RequestURL<%s> | Code Local<%s>",request.getRequestURI(),
+        String Url = request.getRequestURI();
+        var message = String.format("`Exception Catch` | RequestURL<%s> | Code Local<%s>", Url,
                 Objects.requireNonNull(handler).toString());
 
-        var result= Result.exceptionCatchResult(ex,request);
-        var r=new ModelAndView(new MappingJackson2JsonView());
-        r.addObject("data",result.data);
-        r.addObject("err",result.err);
-        r.addObject("message",result.message);
+            logger.error(message,ex);
+
+        var result = Result.exceptionCatchResult(ex, request);
+        var r = new ModelAndView(new MappingJackson2JsonView());
+        r.addObject("data", result.data);
+        r.addObject("err", result.err);
+        r.addObject("message", result.message);
 
         return r;
     }

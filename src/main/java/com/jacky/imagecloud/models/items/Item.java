@@ -54,6 +54,10 @@ public class Item {
     @Column(nullable = false)
     private Boolean hidden;
 
+    @JsonIgnore
+    @Transient
+    private Boolean used=false;
+
     public Item() {
         subItems = new LinkedList<>();
     }
@@ -225,16 +229,20 @@ public class Item {
     public Item findTargetItem(String path, boolean withHidden) {
         Item targetItem = null;
 
-        if (itemName.equals(path))
+        if (itemName.equals(path) && !used) {
+            used=true;
             targetItem = this;
+            return targetItem;
+        }
 
         if (subItems == null)
             subItems = new LinkedList<>();
 
         for (Item subItem :
                 subItems) {
-            if (subItem.itemName.equals(path)) {
+            if (subItem.itemName.equals(path)&&!subItem.used) {
                 targetItem = subItem;
+                subItem.used=true;
                 break;
             }
         }

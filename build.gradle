@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.jacky'
-version = '1.0.6'
+version = '1.0.7'
 
 sourceCompatibility = '11'
 
