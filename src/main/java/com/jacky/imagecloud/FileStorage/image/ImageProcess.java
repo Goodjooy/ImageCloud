@@ -1,22 +1,19 @@
 package com.jacky.imagecloud.FileStorage.image;
 
+import at.dhyan.open_imaging.GifDecoder;
 import com.jacky.imagecloud.err.file.FileFormatNotSupportException;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.List;
 
 public class ImageProcess {
 
     public final static String[] supportFileFormat = ImageIO.getReaderFormatNames();
-
 
 
     public static boolean checkSupportFileFormat(String filename, boolean errThrow) {
@@ -26,26 +23,29 @@ public class ImageProcess {
             throw new FileFormatNotSupportException(String.format("file format name<%s> not support", fileFormat));
         return support;
     }
-    public static String getFileFormat(Path filename){
+
+    public static String getFileFormat(Path filename) {
         return getFileFormat(filename.getFileName().toFile().getName());
     }
 
-    public static String getFileFormat(String  filename){
+    public static String getFileFormat(String filename) {
         return filename.substring(filename.lastIndexOf(".") + 1);
     }
+
     public static BufferedImage transformImage(File file, int maxSize) throws IOException {
         checkSupportFileFormat(file.getName(), true);
 
         var rawImage = ImageIO.read(file);
-        return transformImage(rawImage,maxSize);
+        return transformImage(rawImage, maxSize);
     }
 
     public static BufferedImage transformImage(InputStream inputStream, String filename, int maxSize) throws IOException {
         checkSupportFileFormat(filename, true);
 
-        var rawImage = ImageIO.read(inputStream);
-        return transformImage(rawImage,maxSize);
+        var rawImage = ImageReader(inputStream, filename);
+        return transformImage(rawImage, maxSize);
     }
+
     public static BufferedImage transformImage(BufferedImage image, int maxSize) {
         int width = image.getWidth();
         int height = image.getHeight();
@@ -61,7 +61,7 @@ public class ImageProcess {
     public static BufferedImage transformImage(InputStream inputStream, String filename, float scale) throws IOException {
         checkSupportFileFormat(filename, true);
 
-        var RawImage = ImageIO.read(inputStream);
+        var RawImage = ImageReader(inputStream, filename);
         return transformImageFromBufferedImage(RawImage, scale);
     }
 
@@ -70,8 +70,8 @@ public class ImageProcess {
     }
 
     public static BufferedImage transformImageFromFile(File file, float scale) throws IOException {
-        checkSupportFileFormat(file.getName(),true);
-        return transformImageFromBufferedImage(ImageIO.read(file), scale);
+        checkSupportFileFormat(file.getName(), true);
+        return transformImageFromBufferedImage(ImageReader(file), scale);
     }
 
     public static BufferedImage transformImageFromBufferedImage(BufferedImage RawImage, float scale) {
@@ -83,9 +83,11 @@ public class ImageProcess {
         int THeight = Math.round(height * scale);
         return transformImageFromBufferedImage(RawImage, TWidth, THeight);
     }
-    public static BufferedImage transformImageIntoSquareFromBufferedImage(BufferedImage RawImage, int size){
-        return transformImageFromBufferedImage(RawImage,size,size);
+
+    public static BufferedImage transformImageIntoSquareFromBufferedImage(BufferedImage RawImage, int size) {
+        return transformImageFromBufferedImage(RawImage, size, size);
     }
+
     public static BufferedImage transformImageFromBufferedImage(BufferedImage RawImage, int width, int height) {
         var ThumbnailImageMid = RawImage.getScaledInstance(width, height,
                 Image.SCALE_SMOOTH);
@@ -104,6 +106,21 @@ public class ImageProcess {
 
     public static boolean BufferImageToFile(BufferedImage image, String fileFormat, File file) throws IOException {
         return ImageIO.write(image, fileFormat, file);
+    }
+
+    public static BufferedImage ImageReader(InputStream stream, String fileName) throws IOException {
+        BufferedImage img;
+        if (fileName.toLowerCase().endsWith(".gif")) {
+            var Gif = GifDecoder.read(stream);
+            img = Gif.getFrame(0);
+        } else {
+            img = ImageIO.read(stream);
+        }
+        return img;
+    }
+
+    public static BufferedImage ImageReader(File file) throws IOException {
+        return ImageReader(new FileInputStream(file), file.getName());
     }
 
 

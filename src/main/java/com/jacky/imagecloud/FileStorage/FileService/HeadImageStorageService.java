@@ -14,6 +14,7 @@ import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -65,7 +66,7 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         image.setFileName(SaveFilename);
         image.setSetHeaded(true);
         try {
-            var img = ImageIO.read(file.getInputStream());
+            var img = ImageProcess.ImageReader(file.getInputStream(),file.getOriginalFilename());
             var splitLen = Math.min(img.getWidth(), img.getHeight());
             var x = Math.round((img.getWidth() - splitLen) / 2.0);
             var y = Math.round((img.getHeight() - splitLen) / 2.0);
