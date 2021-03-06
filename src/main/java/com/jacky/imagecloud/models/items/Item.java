@@ -122,6 +122,11 @@ public class Item {
         return t;
     }
 
+    public boolean resetStatus(){
+        this.used=false;
+        return false;
+    }
+
     public List<String> getSameNameSubItem(String name, ItemType type) {
         return subItems.stream()
                 .filter(item -> item.itemName.equals(name) && item.itemType == type)

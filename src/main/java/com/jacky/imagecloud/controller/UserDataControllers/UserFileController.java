@@ -290,6 +290,7 @@ public class UserFileController {
             {
                 Item target;
                 try {
+                    user.resetItemsStatus();
                     target = user.rootItem.getTargetItem(targetPath, true);
 
                     target.reverseHidden();

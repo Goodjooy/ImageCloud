@@ -181,6 +181,10 @@ public class User {
         return result.count() <= 0;
     }
 
+    public  void resetItemsStatus(){
+        var t=seizedFiles.stream().map(Item::resetStatus);
+    }
+
     @Override
     public String toString() {
         return String.format("User<%s | %s>",name,emailAddress);
