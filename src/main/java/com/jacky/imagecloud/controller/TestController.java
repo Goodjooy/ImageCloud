@@ -3,9 +3,11 @@ package com.jacky.imagecloud.controller;
 import com.jacky.imagecloud.data.Result;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
-import javax.servlet.ServletRequest;
 import java.util.List;
 
 @Controller
@@ -14,15 +16,15 @@ public class TestController {
 
     @GetMapping("/m")
     @ResponseBody
-    public Result<List<String>>testMutGet(
-            @RequestParam(value = "m",defaultValue = "1|2|1%2cffff")String []data
-    ){
+    public Result<List<String>> testMutGet(
+            @RequestParam(value = "m", defaultValue = "1|2|1%2cffff") String[] data
+    ) {
         return new Result<>(List.of(data));
     }
 
     @GetMapping("/e")
     @ResponseBody
-    public void exp(){
+    public void exp() {
         throw new NullPointerException("ababab");
     }
 
@@ -42,17 +44,19 @@ public class TestController {
     }
 
     @GetMapping("/user-verify")
-    public String userVerify(){
+    public String userVerify() {
         return "user-verify";
     }
+
     @GetMapping("/user-find-password")
-    public String  findPassword(
+    public String findPassword(
             Model model,
-            @RequestParam(name = "email")String email
-    ){
-        model.addAttribute("email",email);
+            @RequestParam(name = "email") String email
+    ) {
+        model.addAttribute("email", email);
         return "user-find-password";
     }
+
     @GetMapping(path = "/upload")
     public String uploadFile() {
         return "file-upload";
@@ -62,8 +66,9 @@ public class TestController {
     public String uploadHead() {
         return "head-upload";
     }
+
     @GetMapping("/test-cors")
-    public String testCors(){
+    public String testCors() {
         return "test-cors";
     }
 }

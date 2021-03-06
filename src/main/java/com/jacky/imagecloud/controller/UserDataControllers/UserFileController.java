@@ -302,7 +302,7 @@ public class UserFileController {
                             Info.of(target.getHidden(), "hiddenStatus"));
                     return Result.okResult(true);
                 } catch (BaseException | BaseRuntimeException e) {
-                    logger.operateFailure("Change Status",
+                    logger.operateFailure("Change Status",e,
                             authentication,
                             Info.of(targetPath, "targetPath"));
                     return Result.failureResult(e);
@@ -366,7 +366,6 @@ public class UserFileController {
         var user = root.getUser();
         var groups = root.splitPath(path);
 
-        boolean exitTree = false;
         Item t;
         Item temp = root;
         for (String p :

@@ -7,8 +7,6 @@ import com.jacky.imagecloud.err.file.StorageException;
 import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.models.users.User;
 import com.jacky.imagecloud.models.users.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -34,7 +32,6 @@ public class FileController {
     UserRepository repository;
 
 
-
     @GetMapping("/headImagePreview")
     public String headImagePreview(
             Model model,
@@ -44,12 +41,12 @@ public class FileController {
         User user = User.databaseUser(repository, authentication);
         var image = user.image;
 
-        model.addAttribute("i512",image.getFileX512URL());
-        model.addAttribute("i256",image.getFileX256URL());
-        model.addAttribute("i128",image.getFileX128URL());
-        model.addAttribute("i64",image.getFileX64URL());
-        model.addAttribute("i32",image.getFileX32URL());
-        model.addAttribute("i16",image.getFileX16URL());
+        model.addAttribute("i512", image.getFileX512URL());
+        model.addAttribute("i256", image.getFileX256URL());
+        model.addAttribute("i128", image.getFileX128URL());
+        model.addAttribute("i64", image.getFileX64URL());
+        model.addAttribute("i32", image.getFileX32URL());
+        model.addAttribute("i16", image.getFileX16URL());
 
         logger.info(String.format("preview user<%s> headImages", user.emailAddress));
         return "head-preview";
@@ -67,7 +64,7 @@ public class FileController {
     @GetMapping("/storage/{filename:.+}")
     @ResponseBody
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
-        logger.storageFileOperateSuccess(filename,"Find Raw Image", Info.of("In Storage Zone","Where"));
+        logger.storageFileOperateSuccess(filename, "Find Raw Image", Info.of("In Storage Zone", "Where"));
 
         Resource file = fileUploader.loadAsResource(filename);
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
@@ -76,7 +73,7 @@ public class FileController {
 
     @GetMapping("/thumbnail/{filename:.+}")
     public ResponseEntity<Resource> thumbnailFIle(@PathVariable String filename) {
-        logger.storageFileOperateSuccess(filename,"Find Thumbnail Image", Info.of("In Thumbnail Zone","Where"));
+        logger.storageFileOperateSuccess(filename, "Find Thumbnail Image", Info.of("In Thumbnail Zone", "Where"));
 
         Resource file = fileUploader.loadThumbnailAsResource(filename);
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
@@ -84,7 +81,7 @@ public class FileController {
     }
 
     @ExceptionHandler(StorageException.class)
-    public ResponseEntity<?>storageExceptionHandle(StorageException e, ServletRequest request, ServletResponse response){
+    public ResponseEntity<?> storageExceptionHandle(StorageException e, ServletRequest request, ServletResponse response) {
         logger.storageFileOperateFailure(e);
 
         return ResponseEntity.notFound().build();

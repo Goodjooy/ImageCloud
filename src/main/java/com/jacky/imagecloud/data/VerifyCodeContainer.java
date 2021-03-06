@@ -56,4 +56,12 @@ public class VerifyCodeContainer {
         return duration.toSeconds();
     }
 
+    @Override
+    public String toString() {
+        return "VerifyCodeContainer{" +
+                "code='" + code + '\'' +
+                ", activate=" + activate +
+                ", createTime=" + createTime +
+                '}';
+    }
 }

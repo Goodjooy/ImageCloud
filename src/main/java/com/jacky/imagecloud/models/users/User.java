@@ -114,11 +114,11 @@ public class User {
 
     public static void userNameCheck(String name) throws BadUserInformationException {
         if (name.length() > 16 || name.length() == 0)
-            throw new BadUserInformationException("User Name Length Out Of Range [1,16]");
+            throw new BadUserInformationException("User Name Length Out Of Range [1,16] | "+name.length() );
     }
     public static void userPasswordCheck(String password) throws BadUserInformationException {
         if (password.length() < 6 || password.length() > 32)
-            throw new BadUserInformationException("Password Length Out Of Range [6, 32]");
+            throw new BadUserInformationException("Password Length Out Of Range [6, 32] | "+password.length());
     }
 
     public void constructItem(boolean withHidden, boolean withRemoved) throws ItemNotFoundException {
@@ -182,7 +182,7 @@ public class User {
     }
 
     public  void resetItemsStatus(){
-        var t=seizedFiles.stream().map(Item::resetStatus);
+        var t=seizedFiles.stream().map(Item::resetStatus).toArray();
     }
 
     @Override
