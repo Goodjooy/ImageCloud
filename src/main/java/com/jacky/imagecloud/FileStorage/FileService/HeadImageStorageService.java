@@ -1,8 +1,8 @@
 package com.jacky.imagecloud.FileStorage.FileService;
 
 import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
-import com.jacky.imagecloud.configs.StorageProperties;
 import com.jacky.imagecloud.FileStorage.image.ImageProcess;
+import com.jacky.imagecloud.configs.StorageProperties;
 import com.jacky.imagecloud.err.file.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.file.ImageSizeNotSupport;
 import com.jacky.imagecloud.err.file.StorageException;
@@ -14,8 +14,8 @@ import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -54,7 +54,7 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         if (file.getOriginalFilename() == null)
             throw new StorageException("Failed to store file with empty file name");
 
-        var newImage=UserImage.generateNameImage();
+        var newImage = UserImage.generateNameImage();
 
         var filename = file.getOriginalFilename();
         var generateName = newImage.getFileName().split("\\.")[0];
@@ -66,7 +66,7 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         var savePath = localPath.resolve(Path.of(SaveFilename)).normalize().toAbsolutePath();
 
         try {
-            var img = ImageProcess.ImageReader(file.getInputStream(),file.getOriginalFilename());
+            var img = ImageProcess.ImageReader(file.getInputStream(), file.getOriginalFilename());
             var splitLen = Math.min(img.getWidth(), img.getHeight());
             var x = Math.round((img.getWidth() - splitLen) / 2.0);
             var y = Math.round((img.getHeight() - splitLen) / 2.0);
@@ -109,11 +109,11 @@ public class HeadImageStorageService implements FileUploader<UserImage> {
         var filename = load(filePath);
         var fileFormat = filePath.substring(filePath.lastIndexOf(".") + 1);
         try {
-            BufferedImage image;
 
-            image = ImageProcess.transformImageFromFile(filename.toFile(), size / 512.0f);
-            var output = ImageProcess.BufferImageToOutputStream(image, fileFormat);
-            return new OutputStreamResource(output, filename);
+            BufferedImage image = ImageProcess.readImageFromFile(filename.toFile(), size / 512f);
+            ByteArrayOutputStream outputStream;
+            outputStream = ImageProcess.BufferImageToOutputStream(image, fileFormat);
+            return new OutputStreamResource(outputStream, filename);
         } catch (IOException | FileFormatNotSupportException e) {
             throw new StorageException("Fail to get resource", e);
         }

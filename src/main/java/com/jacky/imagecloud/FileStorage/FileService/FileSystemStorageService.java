@@ -3,7 +3,6 @@ package com.jacky.imagecloud.FileStorage.FileService;
 import com.jacky.imagecloud.FileStorage.Resource.OutputStreamResource;
 import com.jacky.imagecloud.FileStorage.image.ImageProcess;
 import com.jacky.imagecloud.configs.StorageProperties;
-import com.jacky.imagecloud.err.file.FileFormatNotSupportException;
 import com.jacky.imagecloud.err.file.StorageException;
 import com.jacky.imagecloud.err.file.StorageFileNotFoundException;
 import com.jacky.imagecloud.models.items.FileStorage;
@@ -15,14 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -35,7 +32,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     private final Path rootRawLocation;
     private final Path rootThumbnailLocation;
 
-    private static final float maxSize = 256;
+    private static final int maxSize = 256;
 
 
     @Autowired
@@ -65,31 +62,31 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     public void SaveImageWithThumbnail(InputStream inputStream,
                                        @NotNull String fileName,
                                        @NotNull String fileExtra) throws IOException {
-        var supports = List.of(ImageIO.getReaderFormatNames());
-        if (!supports.contains(fileExtra.toLowerCase()))
-            throw new FileFormatNotSupportException(String.format("file format name<%s> not support", fileExtra));
 
         var copyStream = copyStream(inputStream);
-        //图像压缩比计算
-        var ThumbnailImage = ImageProcess.transformImage(
-                new ByteArrayInputStream(copyStream.toByteArray()), fileName, (int) maxSize);
-
         var RawPath = rootRawLocation.resolve(
                 Path.of(Objects.requireNonNull(fileName))
         ).normalize().toAbsolutePath();
-        var ThumbnailPath = rootThumbnailLocation.resolve(
-                Path.of(fileName)
+        var thumbnailPath = rootThumbnailLocation.resolve(
+                Path.of(Objects.requireNonNull(fileName))
         ).normalize().toAbsolutePath();
 
-        if (!RawPath.getParent().equals(rootRawLocation.toAbsolutePath()) || !
-                ThumbnailPath.getParent().equals(rootThumbnailLocation.toAbsolutePath()))
+
+        if (!RawPath.getParent().equals(rootRawLocation.toAbsolutePath()) ||
+                !thumbnailPath.getParent().equals(rootThumbnailLocation.toAbsolutePath()))
             throw new StorageException("Cannot store file outside current directory.");
 
         Files.copy(new ByteArrayInputStream(copyStream.toByteArray()), RawPath, StandardCopyOption.REPLACE_EXISTING);
-        var status=ImageProcess.BufferImageToFile(ThumbnailImage,fileExtra,ThumbnailPath.toFile());
-        if (!status){
-            throw new StorageException("Save Thumbnail File Fail");
+
+        var image = ImageProcess.ImageReader(new ByteArrayInputStream(copyStream.toByteArray()), fileName);
+        if (image == null) {
+            throw new StorageException("Failure to read Image " + fileName);
         }
+        ImageProcess.BufferImageToFile(
+                ImageProcess.resizeImageIntoLimitSize(image, maxSize),
+                fileExtra,
+                thumbnailPath.toFile()
+        );
     }
 
     @Override
@@ -174,14 +171,20 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
                 return resource;
             } else {
                 Path RawFile = load(filename);
-                var Image = ImageProcess.transformImage(RawFile.toFile(), (int) maxSize);
-
-                var status= ImageProcess.BufferImageToFile(Image, ImageProcess.getFileFormat(file), file.toFile());
+                var Image = ImageProcess.resizeImageIntoLimitSize(RawFile.toFile(), maxSize);
+                var status = ImageProcess.BufferImageToFile(
+                        Image,
+                        ImageProcess.getFileFormat(RawFile),
+                        file.toFile());
                 if (!status)
-                    throw new StorageException("failure to generate Thumbnail Image");
+                    throw new StorageException("Failure to save Thumbnail Image :" + file.toFile().getName());
 
-                return new OutputStreamResource(ImageProcess.BufferImageToOutputStream(Image,
-                        ImageProcess.getFileFormat(filename)), file);
+                return new OutputStreamResource(
+                        ImageProcess.BufferImageToOutputStream(
+                                Image,
+                                ImageProcess.getFileFormat(RawFile)
+                        ),
+                        file);
             }
         } catch (IOException e) {
             throw new StorageFileNotFoundException("Could not read thumbnail file: " + filename, e);
