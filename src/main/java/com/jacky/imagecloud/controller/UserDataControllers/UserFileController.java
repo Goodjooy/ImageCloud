@@ -173,6 +173,7 @@ public class UserFileController {
                     if (path.equals("/root"))
                         throw new RootDeleteException();
 
+                    user.resetItemsStatus();
                     target = rootItem.getTargetItem(path, true);
                     var subItems = target.transformSubItemsToList();
                     subItemDeleter(subItems, flatRemove);
