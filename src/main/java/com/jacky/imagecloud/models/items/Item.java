@@ -1,10 +1,9 @@
 package com.jacky.imagecloud.models.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.jacky.imagecloud.err.item.ItemNotFoundException;
-import com.jacky.imagecloud.err.item.RootPathCanNotBeHiddenException;
-import com.jacky.imagecloud.err.item.RootPathNotExistException;
-import com.jacky.imagecloud.err.item.UnknownItemTypeException;
+import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
+import com.jacky.imagecloud.data.Result;
+import com.jacky.imagecloud.err.item.*;
 import com.jacky.imagecloud.models.users.User;
 import com.sun.istack.NotNull;
 
@@ -56,7 +55,7 @@ public class Item {
 
     @JsonIgnore
     @Transient
-    private Boolean used=false;
+    private Boolean used = false;
 
     public Item() {
         subItems = new LinkedList<>();
@@ -122,8 +121,48 @@ public class Item {
         return t;
     }
 
-    public boolean resetStatus(){
-        this.used=false;
+    public static Item cloneItem(User user, Item rawItem, Item parentDir, ItemRepository repository
+            , FileSystemStorageService storageService, boolean sameNameOK) throws ItemExistException {
+        if (sameNameOK)
+            parentDir.sameNameWarn(rawItem.itemName, rawItem.itemType);
+
+        Item newItem = NewDefaultItem();
+        //copy value
+        newItem.user = user;
+        newItem.itemName = parentDir.sameNameAvoid(rawItem.itemName, rawItem.itemType);
+        newItem.itemType = rawItem.itemType;
+        newItem.setParentItem(parentDir);
+        //add to user
+        user.addItem(newItem);
+        //clone sub items
+        if (rawItem.itemType == ItemType.DIR) {
+            var newSubItems = rawItem.cloneSubItems(parentDir, user, repository, storageService, sameNameOK);
+            user.addItem(newSubItems.toArray(new Item[0]));
+        } else {
+            newItem.file = storageService.clone(rawItem.file.filePath);
+        }
+        //save item
+        repository.save(newItem);
+        return newItem;
+    }
+
+    public void sameNameWarn(String filename, ItemType type) throws ItemExistException {
+        var sameNames = getSameNameSubItem(filename, type);
+        if (sameNames.size() > 0)
+            throw new ItemExistException(itemName, filename);
+    }
+
+    public String sameNameAvoid(String filename, ItemType type) {
+        var sameNames = getSameNameSubItem(filename, type);
+        if (sameNames.size() > 0) {
+            var pos = filename.contains(".") ? filename.lastIndexOf(".") : filename.length();
+            filename = filename.substring(0, pos) + " #" + UUID.randomUUID().toString().substring(0, 8) + filename.substring(pos);
+        }
+        return filename;
+    }
+
+    public boolean resetStatus() {
+        this.used = false;
         return false;
     }
 
@@ -231,11 +270,11 @@ public class Item {
     }
 
     @JsonIgnore
-    public Item findTargetItem(String path, boolean withHidden) {
+    private Item findTargetItem(String path, boolean withHidden) {
         Item targetItem = null;
 
         if (itemName.equals(path) && !used) {
-            used=true;
+            used = true;
             targetItem = this;
             return targetItem;
         }
@@ -245,9 +284,9 @@ public class Item {
 
         for (Item subItem :
                 subItems) {
-            if (subItem.itemName.equals(path)&&!subItem.used) {
+            if (subItem.itemName.equals(path) && !subItem.used) {
                 targetItem = subItem;
-                subItem.used=true;
+                subItem.used = true;
                 break;
             }
         }
@@ -344,6 +383,55 @@ public class Item {
             throw new RootPathCanNotBeHiddenException();
         this.time.modifyTime = LocalDateTime.now();
         hidden = !hidden;
+    }
+
+    public List<Result<Boolean>> moveItemsInto(boolean sameNameItemOK, Iterable< Result<Item>> targetItems) throws ItemExistException {
+        LinkedList<Result<Boolean>> results = new LinkedList<>();
+
+        for (Result<Item> RItem :
+                targetItems) {
+            if (RItem.err)
+                results.add(Result.failureResult(RItem.e));
+            else {
+                var item = RItem.data;
+                item.setParentItem(this);
+                if (!sameNameItemOK)
+                    this.sameNameWarn(item.itemName, item.itemType);
+                else
+                    item.itemName = sameNameAvoid(item.itemName, item.itemType);
+
+                results.add(Result.okResult(true));
+            }
+        }
+        return results;
+    }
+
+    public void cloneTargetItems(boolean sameNameOK, FileSystemStorageService storageService,
+                                 ItemRepository repository, Item... items) throws ItemExistException {
+        User user = this.user;
+
+        for (Item item :
+                items) {
+            Item newItem = Item.cloneItem(user, item, this, repository, storageService, sameNameOK);
+            user.addItem(newItem);
+        }
+    }
+
+    public List<Item> cloneSubItems(Item parent,
+                                    User targetUser,
+                                    ItemRepository repository,
+                                    FileSystemStorageService storageService,
+                                    boolean sameNameOK) throws ItemExistException {
+        List<Item> items = new LinkedList<>();
+        for (Item item : subItems) {
+            items.add(cloneItem(targetUser,
+                    item,
+                    parent,
+                    repository,
+                    storageService,
+                    sameNameOK));
+        }
+        return items;
     }
 
     @Override

@@ -1,8 +1,13 @@
 package com.jacky.imagecloud.models.items;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.jacky.imagecloud.FileStorage.image.ImageProcess;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.*;
+import java.io.File;
+import java.nio.file.Path;
+import java.util.UUID;
 
 @Entity
 public class FileStorage {
@@ -27,4 +32,20 @@ public class FileStorage {
         return String.format("/thumbnail/%s",filePath);
     }
 
+    public static FileStorage newFileStorage(String filename){
+        var fileFormat= ImageProcess.getFileFormat(filename);
+        var newFilename= UUID.randomUUID().toString()+"."+fileFormat;
+
+        FileStorage storage=new FileStorage();
+        storage.filePath=newFilename;
+        return storage;
+    }
+
+    public static FileStorage cloneFileStorage(File originFile){
+        return newFileStorage(originFile.getName());
+    }
+    public static FileStorage newFileStorage(MultipartFile file){
+        return newFileStorage(file.getOriginalFilename());
+
+    }
 }

@@ -16,10 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.MalformedURLException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -33,6 +30,7 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
     private final Path rootThumbnailLocation;
 
     private static final int maxSize = 256;
+
 
 
     @Autowired
@@ -89,6 +87,22 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
         );
     }
 
+    public FileStorage clone(String filename){
+        var file=load(filename);
+        var tFile=loadThumbnail(filename);
+        var cloneStorage=FileStorage.cloneFileStorage(file.toFile());
+        var newFile=load(cloneStorage.filePath);
+        var newTFile=loadThumbnail(cloneStorage.filePath);
+
+        try {
+            Files.copy(file,newFile, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(tFile,newTFile, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new StorageException("Failure to clone file "+file.toString() + " to "+newFile.toString(),e);
+        }
+        return cloneStorage;
+    }
+
     @Override
     public FileStorage storage(MultipartFile file) {
 
@@ -140,11 +154,11 @@ public class FileSystemStorageService implements FileUploader<FileStorage> {
 
     @Override
     public Path load(String filename) {
-        return rootRawLocation.resolve(filename);
+        return rootRawLocation.resolve(filename).normalize().toAbsolutePath();
     }
 
     public Path loadThumbnail(String filename) {
-        return rootThumbnailLocation.resolve(filename);
+        return rootThumbnailLocation.resolve(filename).normalize().toAbsolutePath();
     }
 
     @Override

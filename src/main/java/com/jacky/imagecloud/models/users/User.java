@@ -11,10 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.persistence.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Entity
@@ -94,6 +91,8 @@ public class User {
 
     public static User databaseUser(UserRepository repository,
                                     Authentication authentication) throws UserNotFoundException {
+        if(authentication==null)
+            throw new UserNotFoundException("No User  authentication");
         return databaseUser(repository,authentication.getName());
 
     }
@@ -161,11 +160,11 @@ public class User {
         return rootItem.findAllRemoveSubItem();
     }
 
-    public void addItem(Item item) {
+    public void addItem(Item ...item) {
         if (seizedFiles == null) {
             seizedFiles = new HashSet<>();
         }
-        seizedFiles.add(item);
+        seizedFiles.addAll(List.of(item));
     }
 
     public void setUserName(String name) throws BadUserInformationException {

@@ -148,7 +148,6 @@ public class ImageProcess {
             img = Gif.getFrame(0);
         }
         else {
-
             img = ImageIO.read(file);
         }
         return img;

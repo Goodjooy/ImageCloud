@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.jacky'
-version = '1.0.8'
+version = '1.0.9.alpha'
 
 sourceCompatibility = '11'
 
@@ -14,8 +14,6 @@ repositories {
 }
 
 dependencies {
-	// https://mvnrepository.com/artifact/com.sun.media/jai-codec
-	implementation group: 'com.sun.media', name: 'jai-codec'
 	compile group: 'net.coobird', name: 'thumbnailator', version: '0.4.11'
 	implementation('org.springframework.boot:spring-boot-starter-mail')
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
