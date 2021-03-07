@@ -226,6 +226,14 @@ public class LoggerHandle {
         ), throwable);
     }
 
+    public void shareOperateSuccess(String operate,String shareCode,Info<?>... extraInfo){
+        info(
+                "`%s | File Share` Success | ShareCode<%s> |%s",
+                operate,shareCode,extraInformation(extraInfo)
+        );
+    }
+
+
     public void operateFailure(String description, Info<?>... infoList) {
         error(String.format("`%s` Failure|%s", description, extraInformation(infoList)), null);
     }

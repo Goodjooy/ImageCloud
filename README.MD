@@ -94,6 +94,9 @@
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
       | POST | path={*pathToCreate*}&<br>hidden={*createHiddenDir*:**false**} | path->要被創建的目錄路徑;<br>hidden(bool)->创建的文件夹为隐藏文件夹 | 創建指定路徑上全部缺失文件夾<br>*路徑以```/root```開頭* | USER |```Result<Boolean>```|
+
+### **User File Operate `/`**
+
 * ```/rename```
   * 文件夹重命名接口
   * 參數列表
@@ -118,6 +121,25 @@
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: |:------: |
       | GET | null | null | 获得用户删除的文件树 | USER | ```Result<Map<String,Item>>``` |
+* ```/move```
+  * 移动指定文件
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
+      | :--: | :--: | :--: | :--: | :--: |:------: |
+      | POST | origins={*itemPathsToMove*}&<br>target={*targetDir*}&<br>sameNameOK={*generateIdCodeForSameNameItem*:**true**} | origins->要被移动的源文件/文件夹；<br>target->移动的目标文件；<br>sameNameOK->在移动目标出现同名文件夹/文件夹将生成区分码 | 将指定的文件/文件夹移动到目标位置<br>*源文件夹支持多文件* | USER | ```Result<List<Result<Boolean>>>``` |
+
+* ```/share```
+  * 分享指定的文件
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
+      | :--: | :--: | :--: | :--: | :--: |:------: |
+      | POST | targets={*itemPathsToShare*} | targets->要分享的文件/文件夹路径 | 分享指定的文件/文件夹，返回生成的分享码 | USER | ```Result<String>``` |
+* ```/catch-share```
+  * 分享指定的文件
+  * 參數列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
+      | :--: | :--: | :--: | :--: | :--: |:------: |
+      | POST | shareCode={*targetShareCode*}&<br>targetPath={*itemPathToSaveItems*} |shareCode->分享码；<br> targetPath->要保存分享的文件/文件夹的文件夹路径 | 保存分享文件<br>*目标文件夹下出现同名将会添加区分码* | USER | ```Result<Boolean>``` |
 
 ### **User Information ```/user```**
 
@@ -178,6 +200,15 @@
       | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
       | :--: | :--: | :--: | :--: | :--: | :------: |  
       | GET | null | null | 获得简单的用户邮箱验证界面 | USER | ```html``` |
+
+### **File Share `/sharePort`**
+
+* ```/s/{shareCode:.+}```
+  * 获取分享信息
+  * 参数列表
+      | 方法 | 参数列表 | 参数描述 | 功能 | 用户限制 | 响应模型 |
+      | :--: | :-----: | :-----: | :--: | :-----: | :------: |
+      | GET | \[路径参数]shareCode | shareCode->目标分享码 | 获取对应分享的内容 | 所有人 | ```List<Item>``` |
 
 ### **Test Port  `/test`**
 
@@ -299,7 +330,7 @@
 * Item Exception
   | 异常名称 | 异常触发条件 |
   | :-----: | :---------: |
-  | `ItemExistException` | 新建文件夹目标文件夹已经存在,恢复文件/文件夹时目录中有同名未删除的文件夹,重命名文件/文件夹时同目录下有同名文件/文件夹 |
+  | `ItemExistException` | 新建文件夹目标文件夹已经存在,<br>恢复文件/文件夹时目录中有同名未删除的文件夹,<br>重命名文件/文件夹时同目录下有同名文件/文件夹 |
   | `ItemNotFoundException` | 指定路径不存在 |
   | `RootDeleteException` | 请求删除`/rrot`目录 |
   | `RootPathCanNotBeHiddenException` | 请求隐藏`/root`目录 |

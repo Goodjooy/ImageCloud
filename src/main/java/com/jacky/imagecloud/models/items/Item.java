@@ -121,9 +121,14 @@ public class Item {
         return t;
     }
 
-    public static Item cloneItem(User user, Item rawItem, Item parentDir, ItemRepository repository
-            , FileSystemStorageService storageService, boolean sameNameOK) throws ItemExistException {
-        if (sameNameOK)
+    public static Item cloneItem(User user,
+                                 Item rawItem,
+                                 Item parentDir,
+                                 ItemRepository repository,
+                                 FileStorageRepository storageRepository,
+                                 FileSystemStorageService storageService,
+                                 boolean sameNameOK) throws ItemExistException {
+        if (!sameNameOK)
             parentDir.sameNameWarn(rawItem.itemName, rawItem.itemType);
 
         Item newItem = NewDefaultItem();
@@ -134,12 +139,22 @@ public class Item {
         newItem.setParentItem(parentDir);
         //add to user
         user.addItem(newItem);
+        //save item
+        repository.save(newItem);
         //clone sub items
         if (rawItem.itemType == ItemType.DIR) {
-            var newSubItems = rawItem.cloneSubItems(parentDir, user, repository, storageService, sameNameOK);
+            var newSubItems = rawItem.cloneSubItems(newItem,
+                    user,
+                    repository,
+                    storageRepository,
+                    storageService,
+                    sameNameOK);
             user.addItem(newSubItems.toArray(new Item[0]));
         } else {
-            newItem.file = storageService.clone(rawItem.file.filePath);
+            FileStorage storage = storageService.clone(rawItem.file.filePath);
+            storage.item = newItem;
+            newItem.file = storage;
+            storageRepository.save(storage);
         }
         //save item
         repository.save(newItem);
@@ -385,7 +400,7 @@ public class Item {
         hidden = !hidden;
     }
 
-    public List<Result<Boolean>> moveItemsInto(boolean sameNameItemOK, Iterable< Result<Item>> targetItems) throws ItemExistException {
+    public List<Result<Boolean>> moveItemsInto(boolean sameNameItemOK, Iterable<Result<Item>> targetItems) throws ItemExistException {
         LinkedList<Result<Boolean>> results = new LinkedList<>();
 
         for (Result<Item> RItem :
@@ -407,12 +422,12 @@ public class Item {
     }
 
     public void cloneTargetItems(boolean sameNameOK, FileSystemStorageService storageService,
-                                 ItemRepository repository, Item... items) throws ItemExistException {
+                                 ItemRepository repository, FileStorageRepository storageRepository, Iterable<Item> items) throws ItemExistException {
         User user = this.user;
 
         for (Item item :
                 items) {
-            Item newItem = Item.cloneItem(user, item, this, repository, storageService, sameNameOK);
+            Item newItem = Item.cloneItem(user, item, this, repository, storageRepository, storageService, sameNameOK);
             user.addItem(newItem);
         }
     }
@@ -420,6 +435,7 @@ public class Item {
     public List<Item> cloneSubItems(Item parent,
                                     User targetUser,
                                     ItemRepository repository,
+                                    FileStorageRepository storageRepository,
                                     FileSystemStorageService storageService,
                                     boolean sameNameOK) throws ItemExistException {
         List<Item> items = new LinkedList<>();
@@ -428,6 +444,7 @@ public class Item {
                     item,
                     parent,
                     repository,
+                    storageRepository,
                     storageService,
                     sameNameOK));
         }

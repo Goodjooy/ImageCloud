@@ -1,5 +1,8 @@
 package com.jacky.imagecloud.models.items;
 
+import com.jacky.imagecloud.err.item.ItemNotFoundException;
+import com.jacky.imagecloud.models.users.User;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,20 +17,37 @@ public class Share {
     @Column(unique = true, updatable = false, nullable = false, length = 64)
     String uuid;
 
-    @OneToMany(targetEntity = Item.class, fetch = FetchType.LAZY)
-    @JoinColumn(name = "item_id")
+    @ManyToMany(targetEntity = Item.class, fetch = FetchType.LAZY)
     List<Item> items;
+
+    @ManyToOne(targetEntity = User.class, fetch = FetchType.LAZY)
+    User user;
 
     LocalDateTime createTime;
 
-    public static Share newShare(Item...items) {
+    public static Share newShare(Item... items) {
         Share share = new Share();
         share.uuid = UUID.randomUUID().toString();
 
-        share.items=List.of(items);
-        share.createTime=LocalDateTime.now();
+        share.items = List.of(items);
+        share.createTime = LocalDateTime.now();
 
         return share;
     }
 
+    public String getCode() {
+        return uuid;
+    }
+
+    public List<Item> getItems() {
+        return items;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void constructUser() throws ItemNotFoundException {
+        user.constructItem(true,false);
+    }
 }

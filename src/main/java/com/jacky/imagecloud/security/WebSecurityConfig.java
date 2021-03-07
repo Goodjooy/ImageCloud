@@ -63,7 +63,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/test/**",
                         "/sign-up",
                         "/check-email",
-                        "/sharePort",
+                        "/sharePort/**",
                         "/verify-email-page",
                         "/verify-email",
                         "/session-status",
