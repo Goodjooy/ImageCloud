@@ -23,6 +23,7 @@ public class Item {
     private Integer id;
 
     @JsonIgnore
+    @Column(nullable = false)
     private Boolean removed;
 
     @Column(name = "item_name", nullable = false, length = 128)
@@ -33,15 +34,14 @@ public class Item {
 
     @JsonIgnore
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id",nullable = false)
     private User user;
 
-    @JsonIgnore
     @OneToOne(mappedBy = "item", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private ItemTime time;
 
     @JsonIgnore
-    @Column(name = "parent")
+    @Column(name = "parent",nullable = false)
     private Integer parentID;
 
     @Transient
@@ -263,7 +263,7 @@ public class Item {
         Item temp = this;
         for (String p :
                 pathGroup) {
-            temp = temp.findTargetItem(p, withHidden);
+            temp = temp.findInSubItems(p, withHidden);
             if (temp == null) {
                 throw new ItemNotFoundException(path);
             }
@@ -285,7 +285,7 @@ public class Item {
     }
 
     @JsonIgnore
-    private Item findTargetItem(String path, boolean withHidden) {
+    public Item findInSubItems(String path, boolean withHidden) {
         Item targetItem = null;
 
         if (itemName.equals(path) && !used) {
@@ -422,12 +422,14 @@ public class Item {
     }
 
     public void cloneTargetItems(boolean sameNameOK, FileSystemStorageService storageService,
-                                 ItemRepository repository, FileStorageRepository storageRepository, Iterable<Item> items) throws ItemExistException {
+                                 ItemRepository repository, FileStorageRepository storageRepository,
+                                 Iterable<Item> items) throws ItemExistException {
         User user = this.user;
 
         for (Item item :
                 items) {
-            Item newItem = Item.cloneItem(user, item, this, repository, storageRepository, storageService, sameNameOK);
+            Item newItem = Item.cloneItem(user, item, this, repository,
+                    storageRepository, storageService, sameNameOK);
             user.addItem(newItem);
         }
     }

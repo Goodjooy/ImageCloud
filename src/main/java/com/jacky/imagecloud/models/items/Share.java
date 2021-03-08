@@ -25,9 +25,10 @@ public class Share {
 
     LocalDateTime createTime;
 
-    public static Share newShare(Item... items) {
+    public static Share newShare(User user,Item... items) {
         Share share = new Share();
         share.uuid = UUID.randomUUID().toString();
+        share.user=user;
 
         share.items = List.of(items);
         share.createTime = LocalDateTime.now();

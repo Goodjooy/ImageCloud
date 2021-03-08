@@ -180,7 +180,7 @@ public class UserFileOperateController {
 
             User user = User.databaseUser(userRepository);
             user.constructItem(true, true);
-            Share share = Share.newShare(Arrays.stream(targets).map(s ->
+            Share share = Share.newShare(user,Arrays.stream(targets).map(s ->
                     {
                         try {
                             var target= user.rootItem.getTargetItem(s, true);

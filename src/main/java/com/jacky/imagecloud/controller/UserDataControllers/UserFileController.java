@@ -277,7 +277,7 @@ public class UserFileController {
         for (String p :
                 groups) {
 
-            t = temp.getTargetItem(p, true);
+            t = temp.findInSubItems(p, true);
             if (t != null && !items.contains(t)) {
                 items.add(t);
                 temp = t;

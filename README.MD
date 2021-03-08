@@ -269,10 +269,17 @@
     String fileURL;
     String thumbnailURL;
   }
-
+  
+  class ItemTime{
+    LocalDateTime createTime;
+    LocalDateTime modifyTime;
+    LocalDateTime deleteTime;
+  }
+  
   class Item{
     String itemName;
     ItemType itemType;
+    ItemTime time;
     List<Item> subItems;
     FileStorage file;
     boolean hidden;

@@ -68,8 +68,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/verify-email",
                         "/session-status",
                         "/find-password",
-                        "/user-find-password").permitAll()
-                .antMatchers("/file", "/upload", "/walk", "/dir").hasAnyRole("USER", "ADMIN")
+                        "/user-find-password",
+                        "/thumbnail/**").permitAll()
+                .antMatchers("/file", "/upload", "/dir").hasAnyRole("USER", "ADMIN")
                 .antMatchers("/unchecked/**", "/admin/**").hasAnyRole("ADMIN")
 
                 .anyRequest()

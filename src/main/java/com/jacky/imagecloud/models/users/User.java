@@ -3,7 +3,6 @@ package com.jacky.imagecloud.models.users;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jacky.imagecloud.err.item.ItemNotFoundException;
 import com.jacky.imagecloud.err.user.BadUserInformationException;
-import com.jacky.imagecloud.err.user.EmailAddressNotSupportException;
 import com.jacky.imagecloud.err.user.UserNotFoundException;
 import com.jacky.imagecloud.models.items.Item;
 import org.springframework.data.domain.Example;
@@ -72,9 +71,10 @@ public class User {
     }
 
     public static User databaseUser(UserRepository repository) throws UserNotFoundException {
-        var authentication=SecurityContextHolder.getContext().getAuthentication();
-        return databaseUser(repository,authentication);
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return databaseUser(repository, authentication);
     }
+
     public static User databaseUser(UserRepository repository,
                                     String emailAddress) throws UserNotFoundException {
         User user = authUser(emailAddress);
@@ -91,9 +91,9 @@ public class User {
 
     public static User databaseUser(UserRepository repository,
                                     Authentication authentication) throws UserNotFoundException {
-        if(authentication==null)
+        if (authentication == null)
             throw new UserNotFoundException("No User  authentication");
-        return databaseUser(repository,authentication.getName());
+        return databaseUser(repository, authentication.getName());
 
     }
 
@@ -107,17 +107,18 @@ public class User {
     }
 
     public static boolean verifiedUser(UserRepository repository, String emailAddress) throws UserNotFoundException {
-        User user = databaseUser(repository,emailAddress);
+        User user = databaseUser(repository, emailAddress);
         return user.information.verify;
     }
 
     public static void userNameCheck(String name) throws BadUserInformationException {
         if (name.length() > 16 || name.length() == 0)
-            throw new BadUserInformationException("User Name Length Out Of Range [1,16] | "+name.length() );
+            throw new BadUserInformationException("User Name Length Out Of Range [1,16] | " + name.length());
     }
+
     public static void userPasswordCheck(String password) throws BadUserInformationException {
         if (password.length() < 6 || password.length() > 32)
-            throw new BadUserInformationException("Password Length Out Of Range [6, 32] | "+password.length());
+            throw new BadUserInformationException("Password Length Out Of Range [6, 32] | " + password.length());
     }
 
     public void constructItem(boolean withHidden, boolean withRemoved) throws ItemNotFoundException {
@@ -160,7 +161,7 @@ public class User {
         return rootItem.findAllRemoveSubItem();
     }
 
-    public void addItem(Item ...item) {
+    public void addItem(Item... item) {
         if (seizedFiles == null) {
             seizedFiles = new HashSet<>();
         }
@@ -169,23 +170,23 @@ public class User {
 
     public void setUserName(String name) throws BadUserInformationException {
         userNameCheck(name);
-        this.name=name;
+        this.name = name;
     }
 
-    public boolean targetItemNameSupport(String name,int parentId){
-        var result=seizedFiles.stream().
-                filter(item -> item.getParentID()==parentId).
+    public boolean targetItemNameSupport(String name, int parentId) {
+        var result = seizedFiles.stream().
+                filter(item -> item.getParentID() == parentId).
                 filter(item -> item.getItemName().equals(name));
 
         return result.count() <= 0;
     }
 
-    public  void resetItemsStatus(){
-        var t=seizedFiles.stream().map(Item::resetStatus).toArray();
+    public void resetItemsStatus() {
+        var t = seizedFiles.stream().map(Item::resetStatus).toArray();
     }
 
     @Override
     public String toString() {
-        return String.format("User<%s | %s>",name,emailAddress);
+        return String.format("User<%s | %s>", name, emailAddress);
     }
 }

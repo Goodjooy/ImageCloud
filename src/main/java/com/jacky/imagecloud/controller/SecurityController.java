@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -53,7 +54,7 @@ public class SecurityController {
 
     @Scheduled(fixedDelay = 30000)
     public void checkVerifyCode() {
-        logger.dataAccept(Info.of(userVerifies,"Verify Record"));
+        //logger.dataAccept(Info.of(userVerifies,"Verify Record"));
 
         if (userVerifies.size() == 0) return;
         lock.lock();
@@ -69,12 +70,11 @@ public class SecurityController {
 
     @GetMapping("/session-status")
     @ResponseBody
-    public Result<Boolean> SessionStatus() {
+    public Result<Boolean> SessionStatus(HttpServletRequest request) {
         var context=SecurityContextHolder.getContext();
 
         Authentication authentication=context.getAuthentication();
-        boolean result= authentication != null && authentication.isAuthenticated();
-
+        boolean result= authentication != null && (authentication.isAuthenticated()&&request.getSession(false)!=null);
         logger.securityOperateSuccess("Get User Authentication Status | Authentication Status :"+result);
         return Result.okResult(result);
     }
