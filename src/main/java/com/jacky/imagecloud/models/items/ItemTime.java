@@ -13,32 +13,43 @@ public class ItemTime {
     public Integer id;
 
     @JsonIgnore
-    @OneToOne(targetEntity = Item.class,cascade =CascadeType.ALL)
-    @JoinColumn(name = "item_id",referencedColumnName = "id",nullable = false)
+    @OneToOne(targetEntity = Item.class, cascade = CascadeType.ALL)
+    @JoinColumn(name = "item_id", referencedColumnName = "id", nullable = false)
     public Item item;
 
     @Column(nullable = false)
     public LocalDateTime createTime;
-
     @Column(nullable = false)
     public LocalDateTime modifyTime;
-
     public LocalDateTime deleteTime;
 
-    public static ItemTime nowCreateTime(Item item){
-        ItemTime time=new ItemTime();
-        time.createTime=LocalDateTime.now();
-        time.modifyTime=LocalDateTime.now();
-        time.deleteTime=null;
+    public static ItemTime nowCreateTime(Item item) {
+        ItemTime time = new ItemTime();
+        time.createTime = LocalDateTime.now();
+        time.modifyTime = LocalDateTime.now();
+        time.deleteTime = null;
 
-        time.item=item;
+        time.item = item;
         return time;
     }
 
-    public void modified(){
-        modifyTime=LocalDateTime.now();
+    public void modified() {
+        modifyTime = LocalDateTime.now();
     }
-    public void deleted(){
-        deleteTime=LocalDateTime.now();
+
+    public void deleted() {
+        deleteTime = LocalDateTime.now();
+    }
+
+    public String getCreateTime() {
+        return createTime.toString();
+    }
+
+    public String getModifyTime() {
+        return modifyTime.toString();
+    }
+
+    public String getDeleteTime() {
+        return deleteTime == null ? null : deleteTime.toString();
     }
 }

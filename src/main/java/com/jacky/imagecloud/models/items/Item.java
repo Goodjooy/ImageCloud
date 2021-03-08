@@ -37,7 +37,7 @@ public class Item {
     @JoinColumn(name = "user_id",nullable = false)
     private User user;
 
-    @OneToOne(mappedBy = "item", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "item", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private ItemTime time;
 
     @JsonIgnore
@@ -462,5 +462,9 @@ public class Item {
                 ", parentID=" + parentID +
                 ", hidden=" + hidden +
                 '}';
+    }
+
+    public ItemTime getTime() {
+            return time;
     }
 }
