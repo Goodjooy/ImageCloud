@@ -3,12 +3,11 @@ package com.jacky.imagecloud.controller;
 import com.jacky.imagecloud.data.Result;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Controller
 @RequestMapping("/test")
@@ -21,7 +20,16 @@ public class TestController {
     ) {
         return new Result<>(List.of(data));
     }
+    @GetMapping("/html/**")
+    @ResponseBody
+    public Result<String>pathGet(HttpServletRequest request
+                                 ){
+        Pattern pattern=Pattern.compile("^/test/html/(.+)$");
+        var matcher=pattern.matcher(request.getRequestURI());
+        var path=        matcher.group(1);
 
+        return Result.okResult(path);
+    }
     @GetMapping("/e")
     @ResponseBody
     public void exp() {

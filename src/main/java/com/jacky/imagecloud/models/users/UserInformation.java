@@ -2,11 +2,10 @@ package com.jacky.imagecloud.models.users;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.jacky.imagecloud.FileStorage.FileService.FileSystemStorageService;
-import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
+import com.jacky.imagecloud.FileStorage.FileService.FileService;
 import com.jacky.imagecloud.models.items.ItemType;
 
 import javax.persistence.*;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.stream.Collectors;
@@ -44,9 +43,9 @@ public class UserInformation {
         return information;
     }
 
-    public String getFormatTotalSize(){return FileUploader.formatSize(totalSize);
+    public String getFormatTotalSize(){return FileService.formatSize(totalSize);
     }
-    public String getFormatUsedSize(){return FileUploader.formatSize(usedSize);}
+    public String getFormatUsedSize(){return FileService.formatSize(usedSize);}
 
     public Long availableSize() {
         return totalSize - usedSize;

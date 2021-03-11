@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 @Service
-public class FileSystemStorageService implements FileUploader<FileStorage> {
+public class FileSystemStorageService implements FileService<FileStorage> {
 
 
     private final Path rootRawLocation;

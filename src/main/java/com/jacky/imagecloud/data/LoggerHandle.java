@@ -1,6 +1,6 @@
 package com.jacky.imagecloud.data;
 
-import com.jacky.imagecloud.FileStorage.FileService.FileUploader;
+import com.jacky.imagecloud.FileStorage.FileService.FileService;
 import com.jacky.imagecloud.err.BaseException;
 import com.jacky.imagecloud.err.BaseRuntimeException;
 import com.jacky.imagecloud.models.items.Item;
@@ -70,7 +70,7 @@ public class LoggerHandle {
         var information = String.format(
                 "`Upload` Success ! | File<%s | %s> | Path<%s> | User<%s | %s> |%s"
                 , file.getOriginalFilename()
-                , FileUploader.formatSize(file.getSize()), path
+                , FileService.formatSize(file.getSize()), path
                 , user.name, user.emailAddress, extraInformation(infoList)
         );
         logger.info(information);

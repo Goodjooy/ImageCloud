@@ -3,9 +3,6 @@ package com.jacky.imagecloud.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jacky.imagecloud.data.LoggerHandle;
 import com.jacky.imagecloud.models.users.UserRepository;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,12 +10,8 @@ import org.springframework.security.config.annotation.authentication.builders.Au
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-
-import javax.servlet.http.HttpServletRequest;
 
 @Configuration
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
@@ -69,7 +62,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/session-status",
                         "/find-password",
                         "/user-find-password",
-                        "/thumbnail/**").permitAll()
+                        "/thumbnail/**",
+                        "/page/static/**").permitAll()
                 .antMatchers("/file", "/upload", "/dir").hasAnyRole("USER", "ADMIN")
                 .antMatchers("/unchecked/**", "/admin/**").hasAnyRole("ADMIN")
 
@@ -83,8 +77,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .usernameParameter("uid")
                 .passwordParameter("paswd")
 
-                .successHandler(new LoginSuccessHandle(logger,mapper))
-                .failureHandler(new LoginFailureHandle(logger,mapper))
+                .successHandler(new LoginSuccessHandle(logger, mapper))
+                .failureHandler(new LoginFailureHandle(logger, mapper))
                 .permitAll()
                 .and()
 
@@ -107,10 +101,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .cors()
                 .configurationSource(request -> {
-                    CorsConfiguration configuration=new CorsConfiguration();
+                    CorsConfiguration configuration = new CorsConfiguration();
                     configuration.addAllowedMethod(HttpMethod.GET);
                     configuration.addAllowedOrigin("https://www.bilibili.com");
-                    return  configuration;
+                    return configuration;
                 })
 
                 .and() //;

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Service
-public class HeadImageStorageService implements FileUploader<UserImage> {
+public class HeadImageStorageService implements FileService<UserImage> {
     private final Path localPath;
     private final List<Integer> sizeRange = List.of(16, 32, 64, 128, 256, 512);
 

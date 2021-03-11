@@ -41,7 +41,7 @@ public class ErrorHandle extends AbstractHandlerExceptionResolver {
                                               @NotNull Exception ex) {
         String Url = request.getRequestURI();
         var message = String.format("`Exception Catch` | RequestURL<%s> | Code Local<%s>", Url,
-                Objects.requireNonNull(handler).toString());
+                handler==null?"unknown":(handler).toString());
 
             logger.error(message,ex);
 
